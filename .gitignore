@@ -1,0 +1,29 @@
+# Geheimnisse und lokale Konfiguration
+.env
+.env.*
+!.env.example
+
+# Datenbanken (enthalten personenbezogene Daten)
+data/*
+!data/.gitkeep
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Lokale Werkzeuge
+.claude/
+.idea/
+.vscode/
+*.log

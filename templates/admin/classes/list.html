@@ -1,0 +1,120 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Klassenliste – Admin{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Klassenliste</h2>
+</div>
+
+<div class="card-grid" style="margin-bottom:1.5rem;">
+  <article>
+    <hgroup>
+      <h3>Neue Klasse</h3>
+      <p>Einzeln anlegen</p>
+    </hgroup>
+    <form method="post" action="/admin/classes/new">
+      {{ csrf_input(request) }}
+      <div class="form-row form-row-3">
+        <div>
+          <label for="new-label">Klasse *</label>
+          <input type="text" id="new-label" name="label" placeholder="z.B. 3b" required>
+        </div>
+        <div>
+          <label for="new-year">Schuljahr *</label>
+          <input type="text" id="new-year" name="school_year" placeholder="z.B. 2026/27" required>
+        </div>
+        <div>
+          <button type="submit" aria-label="Klasse anlegen">+</button>
+        </div>
+      </div>
+      <label class="checkbox-row" style="margin-top:0.5rem;">
+        <input type="checkbox" name="active" value="1" checked>
+        <span>Aktiv – steht bei neuen Anmeldungen zur Auswahl</span>
+      </label>
+    </form>
+  </article>
+
+  <article>
+    <hgroup>
+      <h3>CSV-Import</h3>
+      <p>Spalten: <code>label</code>, <code>school_year</code></p>
+    </hgroup>
+    <form method="post" action="/admin/classes/import" enctype="multipart/form-data">
+      {{ csrf_input(request) }}
+      <label for="csv-file">CSV-Datei</label>
+      <input type="file" id="csv-file" name="file" accept=".csv,text/csv" required
+             aria-describedby="csv-hint">
+      <small class="text-muted" id="csv-hint">
+        Erste Zeile als Spaltenüberschrift. Komma oder Semikolon als Trenner.
+        Bereits vorhandene Klassen werden übersprungen.
+      </small>
+      <button type="submit" style="margin-top:0.5rem;">Importieren</button>
+    </form>
+  </article>
+</div>
+
+{% if klassen %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Klasse</th>
+        <th scope="col">Schuljahr</th>
+        <th scope="col">Status</th>
+        <th scope="col">Anmeldungen</th>
+        <th scope="col">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in klassen %}
+      {% set in_use = usage.get(k.id, 0) %}
+      <tr>
+        <td><strong>{{ k.label }}</strong></td>
+        <td>{{ k.school_year }}</td>
+        <td>
+          {% if k.active %}
+          <span class="badge badge-ok">Aktiv</span>
+          {% else %}
+          <span class="badge badge-neutral">Inaktiv</span>
+          {% endif %}
+        </td>
+        <td>{{ in_use }}</td>
+        <td class="cell-action">
+          <div class="btn-row">
+            <form method="post" action="/admin/classes/{{ k.id }}/edit" style="display:inline">
+              {{ csrf_input(request) }}
+              <input type="hidden" name="label" value="{{ k.label }}">
+              <input type="hidden" name="school_year" value="{{ k.school_year }}">
+              <input type="hidden" name="active" value="{{ '1' if not k.active else '' }}">
+              <button type="submit" class="outline btn-small">
+                {{ 'Deaktivieren' if k.active else 'Aktivieren' }}
+              </button>
+            </form>
+            {% if in_use %}
+            {# Löschen würde am Fremdschlüssel scheitern – gar nicht erst anbieten. #}
+            <button type="button" class="outline contrast btn-small" disabled
+                    title="{{ in_use }} Anmeldung(en) verweisen auf diese Klasse. Deaktivieren Sie sie stattdessen.">
+              Löschen
+            </button>
+            {% else %}
+            <form method="post" action="/admin/classes/{{ k.id }}/delete"
+                  onsubmit="return confirm('Klasse {{ k.label }} löschen?')" style="display:inline">
+              {{ csrf_input(request) }}
+              <button type="submit" class="outline contrast btn-small">Löschen</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<article class="empty-state">
+  <p class="text-muted">Noch keine Klassen angelegt. Eltern können sich erst anmelden,
+  wenn mindestens eine aktive Klasse existiert.</p>
+</article>
+{% endif %}
+
+{% endblock %}

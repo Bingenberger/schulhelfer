@@ -1,0 +1,328 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ event.name }} – Admin{% endblock %}
+{% block content %}
+{% from "macros.html" import status_badge %}
+
+<div class="page-header">
+  <div>
+    <p class="breadcrumb"><a href="/admin">Veranstaltungen</a> /</p>
+    <h2>{{ event.name }}</h2>
+  </div>
+  <div class="page-actions">
+    <a href="/admin/events/{{ event.id }}/edit" role="button" class="outline">Bearbeiten</a>
+    <a href="/admin/events/{{ event.id }}/dashboard" role="button">Dashboard</a>
+  </div>
+</div>
+
+<dl class="meta-grid">
+  <dt>Datum</dt>
+  <dd>{{ event.event_date.strftime('%d.%m.%Y') if event.event_date else '–' }}</dd>
+  <dt>Ort</dt>
+  <dd>{{ event.location or '–' }}</dd>
+  <dt>Status</dt>
+  <dd>{{ status_badge(event.status) }}</dd>
+  <dt>Anmeldefrist</dt>
+  <dd>{{ event.registration_deadline.strftime('%d.%m.%Y %H:%M') if event.registration_deadline else '–' }}
+    <small class="text-muted">(Ortszeit)</small></dd>
+  <dt>Zugangscode</dt>
+  <dd>{{ event.access_code or '(keiner)' }}</dd>
+  <dt>Öffentlicher Link</dt>
+  <dd><a href="/e/{{ event.id }}" target="_blank" rel="noopener">/e/{{ event.id }}</a></dd>
+  <dt>Datenlöschung</dt>
+  <dd>{{ event.retention_weeks }} Wochen nach Event</dd>
+  {% if event.description %}
+  <dt>Beschreibung</dt>
+  <dd>{{ event.description }}</dd>
+  {% endif %}
+</dl>
+
+{% set transitions = {'draft': ['open'], 'open': ['closed'], 'closed': ['published', 'open'], 'published': ['archived']} %}
+{% set next_statuses = transitions.get(event.status, []) %}
+{% set trans_labels = {'open':'Anmeldung öffnen','closed':'Anmeldung schließen','published':'Veröffentlichen','archived':'Archivieren'} %}
+{% if next_statuses %}
+<div class="status-actions">
+  <span class="label">Statuswechsel:</span>
+  {% for next_status in next_statuses %}
+  <form method="post" action="/admin/events/{{ event.id }}/status" style="display:inline">
+    {{ csrf_input(request) }}
+    <input type="hidden" name="new_status" value="{{ next_status }}">
+    <button type="submit" class="{{ 'outline contrast' if next_status == 'open' else 'outline' }} btn-small"
+            {% if next_status == 'published' %}onclick="return confirm('Helferplan veröffentlichen und Bestätigungsmails versenden?')"{% endif %}>
+      {{ trans_labels.get(next_status, next_status) }}
+    </button>
+  </form>
+  {% endfor %}
+</div>
+{% endif %}
+
+<p class="section-title">Stationen &amp; Schichten</p>
+
+<details class="panel">
+  <summary>Neue Station anlegen</summary>
+  <div class="panel-body">
+    <form method="post" action="/admin/events/{{ event.id }}/stations/new">
+      {{ csrf_input(request) }}
+      <div class="form-row form-row-4">
+        <div>
+          <label for="new-station-type">Typ</label>
+          <select id="new-station-type" name="station_type">
+            <option value="helper">Helfer-Station</option>
+            <option value="donation">Spenden-Station</option>
+          </select>
+        </div>
+        <div>
+          <label for="new-station-name">Name *</label>
+          <input type="text" id="new-station-name" name="name" required placeholder="z.B. Getränkestand">
+        </div>
+        <div>
+          <label for="new-station-target">Ziel-Menge <span class="text-muted">(nur Spenden)</span></label>
+          <input type="number" id="new-station-target" name="target_count" min="1" placeholder="–">
+        </div>
+        <div>
+          <button type="submit" style="white-space:nowrap;">+ Station</button>
+        </div>
+      </div>
+      <div style="margin-top:0.5rem;">
+        <label for="new-station-desc">Beschreibung <span class="text-muted">(optional)</span></label>
+        <input type="text" id="new-station-desc" name="description" placeholder="Kurze Erläuterung">
+      </div>
+      <input type="hidden" name="sort_order" value="{{ event.stations|length }}">
+    </form>
+  </div>
+</details>
+
+{% if other_events %}
+<details class="panel">
+  <summary>Aufbau aus einer früheren Veranstaltung übernehmen</summary>
+  <div class="panel-body">
+    <p class="text-muted">
+      Kopiert Stationen (und auf Wunsch die Schichten) einer anderen Veranstaltung.
+      Schichtzeiten werden auf das Datum dieser Veranstaltung verschoben.
+    </p>
+    <form method="post" action="/admin/events/{{ event.id }}/stations/copy">
+      {{ csrf_input(request) }}
+      <div class="form-row form-row-2">
+        <div>
+          <label for="source-event">Vorlage</label>
+          <select id="source-event" name="source_event_id" required>
+            {% for other in other_events %}
+            <option value="{{ other.id }}">
+              {{ other.name }}{% if other.event_date %} ({{ other.event_date.strftime('%d.%m.%Y') }}){% endif %}
+              – {{ other.stations|length }} Stationen
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <button type="submit" style="white-space:nowrap;">Übernehmen</button>
+        </div>
+      </div>
+      <label class="checkbox-row" style="margin-top:0.5rem;">
+        <input type="checkbox" name="with_shifts" value="1" checked>
+        <span>Schichten mitkopieren</span>
+      </label>
+    </form>
+  </div>
+</details>
+{% endif %}
+
+{% for station in event.stations %}
+<article class="station" id="station-{{ station.id }}">
+  <header class="station-head">
+    <div>
+      <strong>{{ station.name }}</strong>
+      <span class="badge {{ 'badge-neutral' if station.type == 'helper' else 'badge-warn' }}">
+        {{ 'Helfer' if station.type == 'helper' else 'Spende' }}
+      </span>
+      {% if station.target_count %}
+      <small class="text-muted"> &middot; Ziel: {{ station.target_count }}</small>
+      {% endif %}
+      {% if station.description %}
+      <p class="text-muted station-desc">{{ station.description }}</p>
+      {% endif %}
+    </div>
+    <form method="post" action="/admin/stations/{{ station.id }}/delete"
+          onsubmit="return confirm('Station „{{ station.name }}“ mit allen Schichten und Buchungen löschen?')">
+      {{ csrf_input(request) }}
+      <button type="submit" class="outline contrast btn-small">Löschen</button>
+    </form>
+  </header>
+
+  <details class="panel inner">
+    <summary>Station bearbeiten</summary>
+    <div class="panel-body">
+      <form method="post" action="/admin/stations/{{ station.id }}/edit">
+        {{ csrf_input(request) }}
+        <div class="form-row form-row-4">
+          <div>
+            <label for="st-name-{{ station.id }}">Name *</label>
+            <input type="text" id="st-name-{{ station.id }}" name="name" value="{{ station.name }}" required>
+          </div>
+          <div>
+            <label for="st-desc-{{ station.id }}">Beschreibung</label>
+            <input type="text" id="st-desc-{{ station.id }}" name="description" value="{{ station.description or '' }}">
+          </div>
+          <div>
+            {% if station.type == 'donation' %}
+            <label for="st-target-{{ station.id }}">Ziel-Menge</label>
+            <input type="number" id="st-target-{{ station.id }}" name="target_count"
+                   value="{{ station.target_count or '' }}" min="1">
+            {% else %}
+            <label for="st-order-{{ station.id }}">Reihenfolge</label>
+            <input type="number" id="st-order-{{ station.id }}" name="sort_order"
+                   value="{{ station.sort_order }}" min="0">
+            {% endif %}
+          </div>
+          <div><button type="submit">Speichern</button></div>
+        </div>
+        {% if station.type == 'donation' %}
+        <input type="hidden" name="sort_order" value="{{ station.sort_order }}">
+        {% endif %}
+      </form>
+    </div>
+  </details>
+
+  {% if station.type == 'helper' %}
+  {% if station.shifts %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Startzeit</th>
+          <th scope="col">Dauer</th>
+          <th scope="col">Soll</th>
+          <th scope="col">Ist</th>
+          <th scope="col"><span class="visually-hidden">Aktionen</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for shift in station.shifts | sort(attribute='start_time') %}
+        {% set booked = shift.bookings|length %}
+        <tr>
+          {# Zeiten korrigieren, statt löschen und neu anlegen zu müssen –
+             Löschen nimmt die eingetragenen Helfer mit. #}
+          <td colspan="3">
+            <form method="post" action="/admin/shifts/{{ shift.id }}/edit" class="inline-edit">
+              {{ csrf_input(request) }}
+              <label class="visually-hidden" for="sh-start-{{ shift.id }}">Startzeit</label>
+              <input type="datetime-local" id="sh-start-{{ shift.id }}" name="start_time"
+                     value="{{ shift.start_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+              <label class="visually-hidden" for="sh-dur-{{ shift.id }}">Dauer in Minuten</label>
+              <input type="number" id="sh-dur-{{ shift.id }}" name="duration_min"
+                     value="{{ shift.duration_min }}" min="1" required class="input-narrow">
+              <label class="visually-hidden" for="sh-req-{{ shift.id }}">Soll-Personen</label>
+              <input type="number" id="sh-req-{{ shift.id }}" name="required_count"
+                     value="{{ shift.required_count }}" min="1" required class="input-narrow">
+              <input type="hidden" name="sort_order" value="{{ shift.sort_order }}">
+              <button type="submit" class="outline btn-small">Speichern</button>
+            </form>
+          </td>
+          <td>
+            {% if booked >= shift.required_count %}
+              <span class="badge badge-ok">{{ booked }}</span>
+            {% elif booked == 0 %}
+              <span class="badge badge-danger">{{ booked }}</span>
+            {% else %}
+              <span class="badge badge-warn">{{ booked }}</span>
+            {% endif %}
+          </td>
+          <td class="cell-action">
+            <form method="post" action="/admin/shifts/{{ shift.id }}/delete"
+                  onsubmit="return confirm({% if booked %}'Diese Schicht hat {{ booked }} eingetragene Helfer. Schicht und Buchungen löschen?'{% else %}'Schicht löschen?'{% endif %})">
+              {{ csrf_input(request) }}
+              <button type="submit" class="outline contrast btn-small">Löschen</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">Noch keine Schichten – legen Sie unten eine Reihe an.</p>
+  {% endif %}
+
+  <details class="panel inner" {% if not station.shifts %}open{% endif %}>
+    <summary>Schichtreihe anlegen</summary>
+    <div class="panel-body">
+      <p class="text-muted">
+        Legt für den angegebenen Zeitraum alle Schichten auf einmal an –
+        z.&nbsp;B. 10:00 bis 18:00 Uhr im 60-Minuten-Takt ergibt acht Schichten.
+      </p>
+      <form method="post" action="/admin/stations/{{ station.id }}/shifts/series">
+        {{ csrf_input(request) }}
+        <div class="form-row form-row-4">
+          <div>
+            <label for="ser-date-{{ station.id }}">Datum</label>
+            <input type="date" id="ser-date-{{ station.id }}" name="series_date"
+                   value="{{ default_date }}" required>
+          </div>
+          <div>
+            <label for="ser-from-{{ station.id }}">Von</label>
+            <input type="time" id="ser-from-{{ station.id }}" name="series_from" value="10:00" required>
+          </div>
+          <div>
+            <label for="ser-to-{{ station.id }}">Bis</label>
+            <input type="time" id="ser-to-{{ station.id }}" name="series_to" value="18:00" required>
+          </div>
+          <div>
+            <button type="submit" style="white-space:nowrap;">+ Reihe</button>
+          </div>
+        </div>
+        <div class="form-row form-row-2" style="margin-top:0.5rem;">
+          <div>
+            <label for="ser-dur-{{ station.id }}">Dauer je Schicht (Min.)</label>
+            <input type="number" id="ser-dur-{{ station.id }}" name="duration_min" value="60" min="1" required>
+          </div>
+          <div>
+            <label for="ser-req-{{ station.id }}">Soll-Personen je Schicht</label>
+            <input type="number" id="ser-req-{{ station.id }}" name="required_count" value="1" min="1" required>
+          </div>
+        </div>
+      </form>
+    </div>
+  </details>
+
+  <details class="panel inner">
+    <summary>Einzelne Schicht hinzufügen</summary>
+    <div class="panel-body">
+      <form method="post" action="/admin/stations/{{ station.id }}/shifts/new">
+        {{ csrf_input(request) }}
+        <div class="form-row form-row-4">
+          <div>
+            <label for="new-start-{{ station.id }}">Startzeit</label>
+            <input type="datetime-local" id="new-start-{{ station.id }}" name="start_time" required>
+          </div>
+          <div>
+            <label for="new-dur-{{ station.id }}">Dauer (Min.)</label>
+            <input type="number" id="new-dur-{{ station.id }}" name="duration_min" value="60" min="1" required>
+          </div>
+          <div>
+            <label for="new-req-{{ station.id }}">Soll-Personen</label>
+            <input type="number" id="new-req-{{ station.id }}" name="required_count" value="1" min="1" required>
+          </div>
+          <div><button type="submit">+ Schicht</button></div>
+        </div>
+        <input type="hidden" name="sort_order" value="{{ station.shifts|length }}">
+      </form>
+    </div>
+  </details>
+  {% endif %}
+</article>
+{% else %}
+<article class="empty-state">
+  <p class="text-muted">Noch keine Stationen angelegt.</p>
+</article>
+{% endfor %}
+
+<p class="section-title" style="margin-top:2rem;">Gefahrenzone</p>
+<div class="danger-zone">
+  <p>Die Veranstaltung und alle zugehörigen Daten werden unwiderruflich gelöscht.</p>
+  <form method="post" action="/admin/events/{{ event.id }}/delete"
+        onsubmit="return confirm('Veranstaltung „{{ event.name }}“ und alle Anmeldungen unwiderruflich löschen?')">
+    {{ csrf_input(request) }}
+    <button type="submit" class="outline contrast btn-small">Veranstaltung löschen</button>
+  </form>
+</div>
+
+{% endblock %}

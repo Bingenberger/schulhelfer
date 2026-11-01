@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }}{% endblock %}
+{% block content %}
+
+<hgroup class="page-intro">
+  <h1>{{ event.name }}</h1>
+  <p class="text-muted">
+    {% if event.event_date %}{{ event.event_date.strftime('%d.%m.%Y') }}{% endif %}
+    {% if event.location %}&nbsp;&middot;&nbsp;{{ event.location }}{% endif %}
+  </p>
+</hgroup>
+
+{% if event.description %}
+<p>{{ event.description }}</p>
+{% endif %}
+
+{% if not code_ok %}
+<article class="narrow">
+  <h2>Zugangscode erforderlich</h2>
+  <p class="text-muted">Diese Veranstaltung ist zugangsbeschränkt. Den Code finden Sie
+  im Elternbrief zur Veranstaltung.</p>
+  <form method="post" action="/e/{{ event.id }}/code">
+    <label for="code">Zugangscode</label>
+    <div class="form-row form-row-2">
+      <input type="text" id="code" name="code" required placeholder="Code eingeben"
+             autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
+      <button type="submit">Bestätigen</button>
+    </div>
+  </form>
+</article>
+
+{% else %}
+
+{% if error %}
+<div class="error-box" role="alert">
+  <p style="margin:0;">{{ error }}</p>
+  {% if show_recovery %}
+  <p style="margin:0.5rem 0 0;">
+    <a href="/e/{{ event.id }}/recover">Zugangslink anfordern &rarr;</a>
+  </p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if field_errors %}
+<div class="error-box" role="alert">
+  <p style="margin:0 0 0.25rem;"><strong>Bitte prüfen Sie Ihre Eingaben:</strong></p>
+  <ul>
+    {% for field, message in field_errors.items() %}
+    <li><a href="#{{ field }}">{{ message }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if event.status != 'open' %}
+<div class="info-box">
+  {% if event.status == 'published' %}
+  Der Helferplan wurde veröffentlicht. Danke an alle, die sich angemeldet haben!
+  {% else %}
+  Die Anmeldung ist derzeit nicht geöffnet.
+  {% endif %}
+</div>
+{% elif deadline_passed %}
+<div class="info-box">
+  Die Anmeldefrist ist am
+  {{ event.registration_deadline.strftime('%d.%m.%Y um %H:%M') }} Uhr abgelaufen.
+  Neue Anmeldungen sind nicht mehr möglich.
+</div>
+{% elif event.registration_deadline %}
+<div class="info-box">
+  Anmeldung möglich bis <strong>{{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr</strong>.
+</div>
+{% endif %}
+
+{% if booking_open %}
+<form method="post" action="/e/{{ event.id }}/book" id="booking-form"
+      data-availability="/e/{{ event.id }}/availability">
+
+  <fieldset class="panel-block">
+    <legend><h2>Ihre Daten</h2></legend>
+    <p class="text-muted">Mit * markierte Felder sind Pflichtfelder.</p>
+
+    <div class="card-grid">
+      <div>
+        <label for="name">Name *</label>
+        <input type="text" id="name" name="name" required autocomplete="name"
+               placeholder="Vor- und Nachname" value="{{ form.name }}"
+               {% if field_errors.get('name') %}aria-invalid="true" aria-describedby="name-error"{% endif %}>
+        {% if field_errors.get('name') %}
+        <small class="field-error" id="name-error">{{ field_errors['name'] }}</small>
+        {% endif %}
+      </div>
+      <div>
+        <label for="klasse_id">Klasse *</label>
+        <select id="klasse_id" name="klasse_id" required
+                {% if field_errors.get('klasse_id') %}aria-invalid="true" aria-describedby="klasse_id-error"{% endif %}>
+          <option value="">– bitte wählen –</option>
+          {% for k in klassen %}
+          <option value="{{ k.id }}" {% if form.klasse_id == k.id %}selected{% endif %}>
+            {{ k.label }} ({{ k.school_year }})
+          </option>
+          {% endfor %}
+        </select>
+        {% if field_errors.get('klasse_id') %}
+        <small class="field-error" id="klasse_id-error">{{ field_errors['klasse_id'] }}</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <label for="email" style="margin-top:0.75rem;">E-Mail-Adresse *</label>
+    <input type="email" id="email" name="email" required autocomplete="email"
+           placeholder="ihre@email.de" value="{{ form.email }}"
+           {% if field_errors.get('email') %}aria-invalid="true" aria-describedby="email-error"{% else %}aria-describedby="email-hint"{% endif %}>
+    {% if field_errors.get('email') %}
+    <small class="field-error" id="email-error">{{ field_errors['email'] }}</small>
+    {% else %}
+    <small class="text-muted" id="email-hint">An diese Adresse wird Ihr persönlicher Zugangslink gesendet.</small>
+    {% endif %}
+  </fieldset>
+
+  <div class="section-head">
+    <h2>Stationen</h2>
+    <small class="text-muted" data-role="updated">Belegung wird laufend aktualisiert.</small>
+  </div>
+
+  <div id="stations" aria-live="polite">
+    {% for s in stations %}
+      {% set selectable = true %}
+      {% set prefix = 'e' %}
+      {% include "partials/station_block.html" with context %}
+    {% else %}
+    <p class="text-muted">Für diese Veranstaltung sind noch keine Stationen eingerichtet.</p>
+    {% endfor %}
+  </div>
+
+  <div class="overlap-warning" id="overlap-warning" hidden role="alert"></div>
+
+  <fieldset class="panel-block">
+    <legend><h2>Datenschutz</h2></legend>
+    <label for="privacy_accepted" class="checkbox-row">
+      <input type="checkbox" id="privacy_accepted" name="privacy_accepted" value="1" required
+             {% if form.privacy_accepted %}checked{% endif %}
+             {% if field_errors.get('privacy_accepted') %}aria-invalid="true"{% endif %}>
+      <span>Ich habe den <a href="{{ privacy_url }}" target="_blank" rel="noopener">Datenschutzhinweis</a>
+      gelesen und akzeptiert. *</span>
+    </label>
+    {% if field_errors.get('privacy_accepted') %}
+    <small class="field-error">{{ field_errors['privacy_accepted'] }}</small>
+    {% endif %}
+  </fieldset>
+
+  <div class="submit-bar">
+    <button type="submit">Verbindlich anmelden</button>
+    <span class="text-muted" data-role="selection-summary"></span>
+  </div>
+</form>
+
+{% else %}
+
+<div class="section-head">
+  <h2>Stationen</h2>
+  <small class="text-muted" data-role="updated"></small>
+</div>
+<div id="stations" data-availability="/e/{{ event.id }}/availability" aria-live="polite">
+  {% for s in stations %}
+    {% set selectable = false %}
+    {% include "partials/station_block.html" with context %}
+  {% else %}
+  <p class="text-muted">Für diese Veranstaltung sind noch keine Stationen eingerichtet.</p>
+  {% endfor %}
+</div>
+
+{% endif %}
+
+<p class="footnote">
+  Sie sind bereits angemeldet und haben Ihren Link verlegt?
+  <a href="/e/{{ event.id }}/recover">Zugangslink neu anfordern</a>
+</p>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/availability.js" defer></script>
+<script src="/static/js/overlap.js" defer></script>
+{% endblock %}

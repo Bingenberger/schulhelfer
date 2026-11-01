@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Schulfest-Helfer{% endblock %}
+{% block content %}
+{% from "macros.html" import status_badge %}
+
+<hgroup class="page-intro">
+  <h1>Helfer-Anmeldung</h1>
+  <p class="text-muted">Hier tragen Sie sich für Schichten ein und sagen Sachspenden zu.</p>
+</hgroup>
+
+{% if events %}
+<ul class="event-cards">
+  {% for event in events %}
+  <li>
+    <a href="/e/{{ event.id }}" class="event-card">
+      <span class="event-card-head">
+        <strong>{{ event.name }}</strong>
+        {% if booking_open_map.get(event.id) %}
+        <span class="badge badge-ok">Anmeldung offen</span>
+        {% elif event.status == 'published' %}
+        <span class="badge badge-neutral">Plan veröffentlicht</span>
+        {% else %}
+        <span class="badge badge-neutral">Anmeldung geschlossen</span>
+        {% endif %}
+      </span>
+      <span class="text-muted">
+        {% if event.event_date %}{{ event.event_date.strftime('%d.%m.%Y') }}{% endif %}
+        {% if event.location %}&nbsp;&middot;&nbsp;{{ event.location }}{% endif %}
+      </span>
+      {% if event.registration_deadline and booking_open_map.get(event.id) %}
+      <span class="text-muted">
+        Anmeldung bis {{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr
+      </span>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<article class="empty-state">
+  <p class="text-muted">Zurzeit steht keine Veranstaltung zur Anmeldung offen.</p>
+</article>
+{% endif %}
+
+<div class="link-cards">
+  <article>
+    <h2>Zugangslink verlegt?</h2>
+    <p class="text-muted">
+      Wenn Ihr gespeicherter Link nicht mehr funktioniert, fordern Sie mit Ihrer
+      E-Mail-Adresse einen neuen an.
+    </p>
+    <a href="/wiederherstellen" role="button" class="outline">Zugangslink anfordern</a>
+  </article>
+  <article>
+    <h2>Organisationsteam</h2>
+    <p class="text-muted">
+      Sie verwalten die Veranstaltungen und den Helferplan?
+    </p>
+    <a href="/admin" role="button" class="outline secondary">Zur Administration</a>
+  </article>
+</div>
+
+{% endblock %}

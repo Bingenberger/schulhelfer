@@ -1,0 +1,34 @@
+{% macro status_badge(status) -%}
+  {%- set labels = {
+    'draft':     'Entwurf',
+    'open':      'Offen',
+    'closed':    'Geschlossen',
+    'published': 'Veröffentlicht',
+    'archived':  'Archiviert'
+  } -%}
+  <span class="status-badge status-{{ status }}">{{ labels[status] if status in labels else status }}</span>
+{%- endmacro %}
+
+{# Fortschrittsbalken mit ARIA-Rolle: der Balken allein ist für Screenreader
+   sonst unsichtbar. `label` beschreibt, worauf sich der Wert bezieht. #}
+{% macro progress(value, target, label='', kind='helper') -%}
+  {%- if target and target > 0 -%}
+    {%- set raw = ((value / target) * 100) | int -%}
+    {%- set pct = 100 if raw > 100 else raw -%}
+    {%- if kind == 'helper' -%}
+      {%- set cls = 'is-full' if value >= target else ('is-warning' if pct >= 66 else '') -%}
+    {%- else -%}
+      {%- set cls = 'is-goal' if value >= target else '' -%}
+    {%- endif -%}
+    <div class="progress-bar" role="progressbar"
+         aria-valuenow="{{ value }}" aria-valuemin="0" aria-valuemax="{{ target }}"
+         aria-label="{{ label }}{% if label %}: {% endif %}{{ value }} von {{ target }}">
+      <div class="progress-fill {{ cls }}" style="width:{{ pct }}%"></div>
+    </div>
+  {%- endif %}
+{%- endmacro %}
+
+{# Rückwärtskompatibler Alias für das Admin-Dashboard. #}
+{% macro shift_progress(booked, required) -%}
+  {{ progress(booked, required, 'Belegung') }}
+{%- endmacro %}

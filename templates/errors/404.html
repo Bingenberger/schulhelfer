@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Seite nicht gefunden{% endblock %}
+{% block content %}
+<article class="narrow center spaced">
+  <p class="error-code" aria-hidden="true">404</p>
+  <h2>Seite nicht gefunden</h2>
+  <p class="text-muted">Die gesuchte Seite existiert nicht oder wurde verschoben.</p>
+  <div class="btn-row centered">
+    <a href="/" role="button" class="outline">Zur Übersicht</a>
+    <a href="/wiederherstellen" role="button" class="outline secondary">Zugangslink anfordern</a>
+  </div>
+</article>
+{% endblock %}

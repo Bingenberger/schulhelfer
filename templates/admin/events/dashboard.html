@@ -1,0 +1,215 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Dashboard – {{ event.name }}{% endblock %}
+{% block content %}
+{% from "macros.html" import status_badge, progress %}
+
+<div class="page-header">
+  <div>
+    <p class="breadcrumb">
+      <a href="/admin">Veranstaltungen</a> /
+      <a href="/admin/events/{{ event.id }}">{{ event.name }}</a> /
+    </p>
+    <h2>Dashboard</h2>
+  </div>
+  <div class="page-actions">
+    <a href="/admin/events/{{ event.id }}/export.csv" role="button" class="outline">CSV-Export</a>
+    <a href="/admin/events/{{ event.id }}/export.pdf" role="button" class="outline">PDF-Export</a>
+    {% if event.status == 'open' %}
+    <form method="post" action="/admin/events/{{ event.id }}/close">
+      {{ csrf_input(request) }}
+      <button type="submit" class="outline">Anmeldung schließen</button>
+    </form>
+    {% endif %}
+    {% if event.status == 'closed' %}
+    <form method="post" action="/admin/events/{{ event.id }}/publish"
+          onsubmit="return confirm('Helferplan veröffentlichen und {{ participant_count }} Bestätigungsmails versenden?')">
+      {{ csrf_input(request) }}
+      <button type="submit">Plan veröffentlichen &amp; Mails senden</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat">
+    <span class="stat-value">{{ participant_count }}</span>
+    <span class="stat-label">Anmeldungen</span>
+  </div>
+  <div class="stat {{ 'is-alert' if understaffed else 'is-ok' }}">
+    <span class="stat-value">{{ understaffed }}</span>
+    <span class="stat-label">Unterbesetzte Schichten</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value">{{ status_badge(event.status) }}</span>
+    <span class="stat-label">Status</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value stat-link"><a href="/e/{{ event.id }}" target="_blank" rel="noopener">/e/{{ event.id }}</a></span>
+    <span class="stat-label">Öffentlicher Link</span>
+  </div>
+</div>
+
+{% if mail_progress %}
+{# Der Versand läuft im Hintergrund weiter – ohne Anzeige weiß niemand, ob er
+   durchgelaufen ist. #}
+<div class="mail-progress {{ 'has-failures' if mail_progress.failed else '' }}">
+  <div class="mail-progress-head">
+    <strong>Bestätigungsmails</strong>
+    <span class="text-muted">
+      {{ mail_progress.sent }} von {{ mail_progress.total }} versandt{% if mail_progress.failed %},
+      {{ mail_progress.failed }} fehlgeschlagen{% endif %}{% if mail_progress.pending > 0 %},
+      {{ mail_progress.pending }} ausstehend{% endif %}.
+    </span>
+  </div>
+  {{ progress(mail_progress.sent, mail_progress.total, 'Versandfortschritt', 'donation') }}
+  {% if mail_progress.failed or mail_progress.pending %}
+  <form method="post" action="/admin/events/{{ event.id }}/resend" style="margin-top:0.6rem;">
+    {{ csrf_input(request) }}
+    <button type="submit" class="outline btn-small">Offene Mails erneut senden</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% for station in event.stations %}
+<article>
+  <header class="station-head">
+    <div>
+      <strong>{{ station.name }}</strong>
+      <span class="badge {{ 'badge-neutral' if station.type == 'helper' else 'badge-warn' }}">
+        {{ 'Helfer-Station' if station.type == 'helper' else 'Spenden-Station' }}
+      </span>
+    </div>
+  </header>
+
+  {% if station.type == 'helper' %}
+  <div class="table-scroll">
+    <table class="dashboard-table">
+      <thead>
+        <tr>
+          <th scope="col">Zeit</th>
+          <th scope="col">Dauer</th>
+          <th scope="col">Belegung</th>
+          <th scope="col">Helfer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for shift in station.shifts | sort(attribute='start_time') %}
+        {% set booked = shift.bookings|length %}
+        <tr class="{{ 'row-danger' if booked < shift.required_count else 'row-ok' }}">
+          <td data-label="Zeit">{{ shift.start_time.strftime('%d.%m. %H:%M') }}</td>
+          <td data-label="Dauer">{{ shift.duration_min }} Min.</td>
+          <td data-label="Belegung" style="min-width:9rem;">
+            <div class="occ-line">
+              <span class="occ-strong">{{ booked }}/{{ shift.required_count }}</span>
+              {% if booked < shift.required_count %}
+              <span class="badge badge-danger">unterbesetzt</span>
+              {% elif booked == shift.required_count %}
+              <span class="badge badge-ok">voll</span>
+              {% else %}
+              <span class="badge badge-warn">überbelegt</span>
+              {% endif %}
+            </div>
+            {{ progress(booked, shift.required_count, station.name ~ ' ' ~ shift.start_time.strftime('%H:%M')) }}
+          </td>
+          <td data-label="Helfer">
+            <ul class="plain-list">
+              {% for booking in shift.bookings %}
+              <li class="helper-row">
+                <span>{{ booking.participant.name }}
+                  <span class="text-muted">({{ booking.participant.klasse.label }})</span>
+                  &ndash; <a href="mailto:{{ booking.participant.email }}" class="mail-link">{{ booking.participant.email }}</a>
+                </span>
+                <form method="post" action="/admin/bookings/{{ booking.id }}/delete"
+                      onsubmit="return confirm('Buchung von {{ booking.participant.name }} stornieren?')">
+                  {{ csrf_input(request) }}
+                  {# event_id gehört ins Formular, nicht in die Query –
+                     sonst antwortet die Route mit einem 422-Fehler. #}
+                  <input type="hidden" name="event_id" value="{{ event.id }}">
+                  <button type="submit" class="outline contrast btn-tiny">Stornieren</button>
+                </form>
+              </li>
+              {% else %}
+              <li class="text-muted"><em>Niemand eingetragen.</em></li>
+              {% endfor %}
+            </ul>
+
+            {% if participants %}
+            <details class="add-helper">
+              <summary>+ Helfer eintragen</summary>
+              <form method="post" action="/admin/events/{{ event.id }}/bookings/add" class="inline-edit">
+                {{ csrf_input(request) }}
+                <label class="visually-hidden" for="add-p-{{ shift.id }}">Teilnehmer</label>
+                <select id="add-p-{{ shift.id }}" name="participant_id" required>
+                  <option value="">– Teilnehmer wählen –</option>
+                  {% for p in participants %}
+                  <option value="{{ p.id }}">{{ p.name }} ({{ p.klasse.label }})</option>
+                  {% endfor %}
+                </select>
+                <input type="hidden" name="shift_id" value="{{ shift.id }}">
+                <button type="submit" class="outline btn-small">Eintragen</button>
+              </form>
+            </details>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  {% set total_qty = namespace(val=0) %}
+  {% for don in station.donations %}{% set total_qty.val = total_qty.val + don.quantity %}{% endfor %}
+
+  <div class="occ-line" style="margin-bottom:0.75rem;">
+    <span>Gesamt: <strong>{{ total_qty.val }}</strong>{% if station.target_count %} / {{ station.target_count }}{% endif %}</span>
+    {% if station.target_count %}
+      {% if total_qty.val < station.target_count %}
+      <span class="badge badge-danger">unter Ziel</span>
+      {% elif total_qty.val > station.target_count %}
+      <span class="badge badge-warn">überzeichnet</span>
+      {% else %}
+      <span class="badge badge-ok">Ziel erreicht</span>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% if station.target_count %}
+  {{ progress(total_qty.val, station.target_count, station.name, 'donation') }}
+  {% endif %}
+
+  {% if station.donations %}
+  <div class="table-scroll" style="margin-top:0.75rem;">
+    <table class="dashboard-table">
+      <thead>
+        <tr>
+          <th scope="col">Spende</th><th scope="col">Menge</th>
+          <th scope="col">Name</th><th scope="col">Klasse</th><th scope="col">E-Mail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for don in station.donations %}
+        <tr>
+          <td data-label="Spende">{{ don.item_text }}</td>
+          <td data-label="Menge">{{ don.quantity }}</td>
+          <td data-label="Name">{{ don.participant.name }}</td>
+          <td data-label="Klasse">{{ don.participant.klasse.label }}</td>
+          <td data-label="E-Mail"><a href="mailto:{{ don.participant.email }}" class="mail-link">{{ don.participant.email }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">Noch keine Spenden zugesagt.</p>
+  {% endif %}
+  {% endif %}
+</article>
+{% else %}
+<article class="empty-state">
+  <p class="text-muted">Für diese Veranstaltung sind keine Stationen eingerichtet.</p>
+  <a href="/admin/events/{{ event.id }}" role="button" class="outline">Stationen anlegen</a>
+</article>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Veranstaltung bearbeiten' if event else 'Neue Veranstaltung' }} – Admin{% endblock %}
+{% block content %}
+{% set form = form | default({}) %}
+{% set field_errors = field_errors | default({}) %}
+
+{# Bei einem Validierungsfehler gewinnen die abgeschickten Werte, damit die
+   Eingabe nicht verlorengeht. #}
+{% macro value(key, fallback='') -%}
+  {{- form.get(key) if form.get(key) is not none and form.get(key) != '' else fallback -}}
+{%- endmacro %}
+
+<div class="page-header" style="margin-bottom:1rem;">
+  <div>
+    <p class="breadcrumb">
+      <a href="/admin">Veranstaltungen</a>
+      {% if event %} / <a href="/admin/events/{{ event.id }}">{{ event.name }}</a>{% endif %} /
+    </p>
+    <h2>{{ 'Veranstaltung bearbeiten' if event else 'Neue Veranstaltung' }}</h2>
+  </div>
+</div>
+
+{% if field_errors %}
+<div class="error-box" role="alert">
+  <p style="margin:0 0 0.25rem;"><strong>Bitte prüfen Sie Ihre Eingaben:</strong></p>
+  <ul>{% for f, m in field_errors.items() %}<li><a href="#{{ f }}">{{ m }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" style="max-width:680px;">
+  {{ csrf_input(request) }}
+  <fieldset>
+    <legend>Grunddaten</legend>
+    <label for="name">Name *</label>
+    <input type="text" id="name" name="name" required placeholder="z.B. Schulfest 2026"
+           value="{{ value('name', event.name if event else '') }}"
+           {% if field_errors.get('name') %}aria-invalid="true"{% endif %}>
+    {% if field_errors.get('name') %}<small class="field-error">{{ field_errors['name'] }}</small>{% endif %}
+
+    <div class="card-grid" style="margin-top:0.75rem;">
+      <div>
+        <label for="event_date">Datum *</label>
+        <input type="date" id="event_date" name="event_date" required
+               value="{{ value('event_date', event.event_date.strftime('%Y-%m-%d') if event and event.event_date else '') }}"
+               {% if field_errors.get('event_date') %}aria-invalid="true"{% endif %}>
+        {% if field_errors.get('event_date') %}<small class="field-error">{{ field_errors['event_date'] }}</small>{% endif %}
+      </div>
+      <div>
+        <label for="location">Ort</label>
+        <input type="text" id="location" name="location" placeholder="z.B. Schulhof"
+               value="{{ value('location', event.location if event and event.location else '') }}">
+      </div>
+    </div>
+
+    <label for="description" style="margin-top:0.75rem;">Beschreibung</label>
+    <textarea id="description" name="description"
+              placeholder="Kurze Beschreibung der Veranstaltung">{{ value('description', event.description if event and event.description else '') }}</textarea>
+  </fieldset>
+
+  <fieldset style="margin-top:1rem;">
+    <legend>Anmeldung &amp; Zugang</legend>
+
+    <label for="registration_deadline">Anmeldefrist</label>
+    <input type="datetime-local" id="registration_deadline" name="registration_deadline"
+           value="{{ value('registration_deadline', event.registration_deadline.strftime('%Y-%m-%dT%H:%M') if event and event.registration_deadline else '') }}"
+           {% if field_errors.get('registration_deadline') %}aria-invalid="true"{% endif %}>
+    {% if field_errors.get('registration_deadline') %}
+    <small class="field-error">{{ field_errors['registration_deadline'] }}</small>
+    {% else %}
+    <small class="text-muted">
+      Bis wann können sich Helfer anmelden? Die Angabe gilt in Ortszeit
+      ({{ settings.TIMEZONE }}) und wird Eltern auf der Anmeldeseite angezeigt.
+    </small>
+    {% endif %}
+
+    <label for="access_code" style="margin-top:0.75rem;">Zugangscode</label>
+    <input type="text" id="access_code" name="access_code" placeholder="Leer lassen für offenen Zugang"
+           value="{{ value('access_code', event.access_code if event and event.access_code else '') }}">
+    <small class="text-muted">
+      Schützt die Anmeldeseite. Groß- und Kleinschreibung spielt bei der Eingabe keine Rolle.
+    </small>
+  </fieldset>
+
+  <fieldset style="margin-top:1rem;">
+    <legend>Datenschutz</legend>
+    <label for="retention_weeks">Datenlöschung nach (Wochen)</label>
+    <input type="number" id="retention_weeks" name="retention_weeks" min="1" max="52"
+           style="max-width:120px;"
+           value="{{ value('retention_weeks', event.retention_weeks if event else 4) }}">
+    <small class="text-muted">Teilnehmerdaten werden automatisch nach dieser Frist gelöscht.</small>
+  </fieldset>
+
+  <div class="btn-row" style="margin-top:1.5rem;">
+    <button type="submit">Speichern</button>
+    <a href="{{ '/admin/events/' + event.id|string if event else '/admin' }}"
+       role="button" class="outline secondary">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Meine Anmeldung – {{ event.name }}{% endblock %}
+{% block content %}
+
+<hgroup class="page-intro">
+  <h2>Meine Anmeldung</h2>
+  <p class="text-muted">
+    {{ event.name }} &middot; {{ participant.name }} ({{ participant.klasse.label }})
+  </p>
+</hgroup>
+
+{% if not booking_open %}
+<div class="info-box">
+  {% if deadline_passed %}
+  Die Anmeldefrist ist am {{ event.registration_deadline.strftime('%d.%m.%Y um %H:%M') }} Uhr
+  abgelaufen. Ihre Einteilung bleibt hier einsehbar, Änderungen sind nicht mehr möglich.
+  {% else %}
+  Die Anmeldung ist geschlossen. Ihre Einteilung bleibt hier einsehbar,
+  Änderungen sind nicht mehr möglich.
+  {% endif %}
+</div>
+{% elif event.registration_deadline %}
+<div class="info-box">
+  Sie können Ihre Anmeldung noch bis
+  <strong>{{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr</strong> ändern.
+</div>
+{% endif %}
+
+<p class="section-title">Meine Schichten</p>
+{% if participant.bookings %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Station</th>
+        <th scope="col">Zeit</th>
+        <th scope="col">Dauer</th>
+        {% if booking_open %}<th scope="col"><span class="visually-hidden">Aktion</span></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for booking in participant.bookings | sort(attribute='shift.start_time') %}
+      <tr>
+        <td>{{ booking.shift.station.name }}</td>
+        <td>{{ booking.shift.start_time.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>{{ booking.shift.duration_min }} Min.</td>
+        {% if booking_open %}
+        <td class="cell-action">
+          <form method="post" action="/s/{{ token }}/cancel">
+            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+            <button type="submit" class="outline contrast btn-small"
+                    onclick="return confirm('Schicht am {{ booking.shift.start_time.strftime('%d.%m. um %H:%M') }} Uhr wirklich stornieren?')">
+              Stornieren
+            </button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-muted">Sie haben noch keine Schicht gebucht.</p>
+{% endif %}
+
+<p class="section-title">Meine Sachspenden</p>
+{% if participant.donations %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Station</th>
+        <th scope="col">Spende</th>
+        <th scope="col">Menge</th>
+        {% if booking_open %}<th scope="col"><span class="visually-hidden">Aktionen</span></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for don in participant.donations %}
+      <tr>
+        <td>{{ don.station.name }}</td>
+        {% if booking_open %}
+        {# Korrigieren statt löschen und neu anlegen. #}
+        <td colspan="2">
+          <form method="post" action="/s/{{ token }}/donation/{{ don.id }}" class="inline-edit">
+            <label class="visually-hidden" for="don-item-{{ don.id }}">Spende</label>
+            <input type="text" id="don-item-{{ don.id }}" name="item_text" value="{{ don.item_text }}" required>
+            <label class="visually-hidden" for="don-qty-{{ don.id }}">Menge</label>
+            <input type="number" id="don-qty-{{ don.id }}" name="quantity" value="{{ don.quantity }}" min="1" step="1">
+            <button type="submit" class="outline btn-small">Speichern</button>
+          </form>
+        </td>
+        <td class="cell-action">
+          <form method="post" action="/s/{{ token }}/cancel">
+            <input type="hidden" name="donation_id" value="{{ don.id }}">
+            <button type="submit" class="outline contrast btn-small"
+                    onclick="return confirm('Zusage „{{ don.item_text }}“ wirklich stornieren?')">
+              Stornieren
+            </button>
+          </form>
+        </td>
+        {% else %}
+        <td>{{ don.item_text }}</td>
+        <td>{{ don.quantity }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-muted">Sie haben noch keine Sachspende zugesagt.</p>
+{% endif %}
+
+{% set my_shift_ids = participant.bookings | map(attribute='shift_id') | list %}
+
+{% if booking_open %}
+<form method="post" action="/s/{{ token }}/add" id="booking-form"
+      data-availability="/e/{{ event.id }}/availability">
+  <div class="section-head">
+    <h3>Weitere Buchungen hinzufügen</h3>
+    <small class="text-muted" data-role="updated">Belegung wird laufend aktualisiert.</small>
+  </div>
+
+  <div id="stations" aria-live="polite">
+    {% for s in stations %}
+      {% set selectable = true %}
+      {% set prefix = 'add' %}
+      {% include "partials/station_block.html" with context %}
+    {% endfor %}
+  </div>
+
+  <div class="overlap-warning" id="overlap-warning" hidden role="alert"></div>
+
+  <div class="submit-bar">
+    <button type="submit">Hinzufügen</button>
+    <span class="text-muted" data-role="selection-summary"></span>
+  </div>
+</form>
+
+{% else %}
+
+<div class="section-head">
+  <h3>Aktuelle Belegung</h3>
+  <small class="text-muted" data-role="updated"></small>
+</div>
+<div id="stations" data-availability="/e/{{ event.id }}/availability" aria-live="polite">
+  {% for s in stations %}
+    {% set selectable = false %}
+    {% set prefix = 'ov' %}
+    {% include "partials/station_block.html" with context %}
+  {% endfor %}
+</div>
+
+{% endif %}
+
+<p class="footnote">
+  <a href="/e/{{ event.id }}">&larr; Zur Veranstaltungsseite</a>
+</p>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/availability.js" defer></script>
+<script src="/static/js/overlap.js" defer></script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Zugangslink wiederherstellen{% endblock %}
+{% block content %}
+
+<article class="narrow center">
+  <h2>Zugangslink wiederherstellen</h2>
+
+  {% if sent %}
+  <div class="success-box" role="status">
+    Falls eine Anmeldung mit dieser E-Mail-Adresse existiert, wurde ein neuer Link versandt.
+    Bitte prüfen Sie Ihr Postfach – auch den Spam-Ordner.
+  </div>
+  <p class="text-muted">Der bisherige Link ist damit nicht mehr gültig.</p>
+  <div class="btn-row">
+    {% if event %}
+    <a href="/e/{{ event.id }}" role="button" class="outline">Zur Veranstaltungsseite</a>
+    {% else %}
+    <a href="/" role="button" class="outline">Zur Übersicht</a>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <p class="text-muted">
+    {% if event %}
+    Geben Sie die E-Mail-Adresse ein, mit der Sie sich für „{{ event.name }}“ angemeldet haben.
+    {% else %}
+    Geben Sie die E-Mail-Adresse ein, mit der Sie sich angemeldet haben. Sie erhalten für
+    jede laufende Anmeldung einen neuen Zugangslink.
+    {% endif %}
+  </p>
+  <form method="post">
+    <label for="email">E-Mail-Adresse</label>
+    <input type="email" id="email" name="email" required autocomplete="email"
+           placeholder="ihre@email.de" autofocus>
+    <button type="submit" style="margin-top:0.5rem;">Link anfordern</button>
+  </form>
+  <p class="footnote">
+    {% if event %}
+    <a href="/e/{{ event.id }}">&larr; Zurück zur Veranstaltungsseite</a>
+    {% else %}
+    <a href="/">&larr; Zurück zur Übersicht</a>
+    {% endif %}
+  </p>
+  {% endif %}
+</article>
+
+{% endblock %}

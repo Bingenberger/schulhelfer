@@ -1,0 +1,18 @@
+{# Einmalige Rückmeldungen. aria-live, damit Screenreader die Bestätigung
+   einer gerade ausgeführten Aktion mitbekommen. #}
+{% set messages = get_flashes(request) %}
+{% if messages %}
+<div class="flash-stack" role="status" aria-live="polite">
+  {% for m in messages %}
+  <div class="flash flash-{{ m.category }}">
+    <span class="flash-icon" aria-hidden="true">
+      {%- if m.category == 'success' %}✓
+      {%- elif m.category == 'error' %}!
+      {%- elif m.category == 'warning' %}!
+      {%- else %}i{% endif -%}
+    </span>
+    <span>{{ m.message }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Formular abgelaufen{% endblock %}
+{% block content %}
+{# Ein abgelaufenes Sicherheitstoken darf keine JSON-Fehlermeldung erzeugen. #}
+<article class="narrow center spaced">
+  <h2>Das Formular konnte nicht abgeschickt werden</h2>
+  <p class="text-muted">
+    {{ detail or "Die Anfrage war nicht gültig. Bitte laden Sie die Seite neu und
+    versuchen Sie es erneut." }}
+  </p>
+  <div class="btn-row centered">
+    <button type="button" onclick="history.back()" class="outline">Zurück zum Formular</button>
+    <a href="/" role="button" class="outline secondary">Zur Übersicht</a>
+  </div>
+</article>
+{% endblock %}

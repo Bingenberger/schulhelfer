@@ -1,0 +1,38 @@
+# nginx-Vhost für die Schulfest-Helfer-App.
+#
+# Installation auf dem Server:
+#   sudo cp nginx.conf.example /etc/nginx/sites-available/schulfest-helfer
+#   sudo ln -s /etc/nginx/sites-available/schulfest-helfer /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# TLS danach per certbot einrichten (baut diese Datei automatisch auf HTTPS um,
+# inkl. HTTP->HTTPS-Redirect):
+#   sudo apt install certbot python3-certbot-nginx
+#   sudo certbot --nginx -d helfer.ggs-ndk.de
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name helfer.ggs-ndk.de;
+
+    # Von der App selbst ausgelieferte statische Dateien direkt von der Platte
+    # bedienen, statt jeden Request bis zu uvicorn durchzureichen.
+    location /static/ {
+        alias /opt/schulfest/static/;
+        expires 7d;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8007;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+
+        proxy_redirect off;
+    }
+}

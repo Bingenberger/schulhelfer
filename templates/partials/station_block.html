@@ -1,0 +1,123 @@
+{# Eine Station – Belegung und Auswahl in einer Liste.
+
+   Zuvor standen beide getrennt auf der Seite, sodass jede Station zweimal
+   erschien. Erwartete Variablen:
+     s                     Stationskontext
+     selectable            Auswahlfelder rendern?
+     form                  Bereits eingegebene Werte (Wiederbefüllung)
+     prefix                Präfix für element-IDs (Seiten-eindeutig)
+     my_shift_ids          Bereits gebuchte Schichten des Teilnehmers
+#}
+{% from "macros.html" import progress %}
+{% set station = s.station %}
+{% set form = form | default({}) %}
+{% set prefix = prefix | default('e') %}
+{% set my_shift_ids = my_shift_ids | default([]) %}
+
+<article class="station" id="station-{{ station.id }}" data-station="{{ station.id }}"
+         data-type="{{ s.type }}">
+  <header class="station-head">
+    <strong>{{ station.name }}</strong>
+    <span class="badge {{ 'badge-neutral' if s.type == 'helper' else 'badge-warn' }}">
+      {{ 'Helfer' if s.type == 'helper' else 'Sachspende' }}
+    </span>
+    {% if station.description %}
+    <p class="text-muted station-desc">{{ station.description }}</p>
+    {% endif %}
+  </header>
+
+  {% if s.type == 'helper' %}
+    {% if s.shifts %}
+    <ul class="shift-list">
+      {% for shift in s.shifts %}
+      {% set mine = shift.id in my_shift_ids %}
+      {% set checked = shift.id in (form.shift_ids | default([])) %}
+      {% set field_id = prefix ~ '-shift-' ~ shift.id %}
+      <li class="shift-item {{ 'is-full' if shift.full and not mine else '' }} {{ 'is-mine' if mine else '' }}"
+          data-shift="{{ shift.id }}">
+        {% if selectable and not mine %}
+        <input type="checkbox" id="{{ field_id }}" name="shift_ids" value="{{ shift.id }}"
+               data-start="{{ shift.start_time.strftime('%Y-%m-%dT%H:%M') }}"
+               data-duration="{{ shift.duration_min }}"
+               data-label="{{ station.name }}, {{ shift.start_time.strftime('%H:%M') }} Uhr"
+               {% if checked %}checked{% endif %}
+               {% if shift.full and not checked %}disabled{% endif %}>
+        {% elif mine %}
+        <span class="shift-mark" aria-hidden="true">✓</span>
+        {% else %}
+        <span class="shift-mark shift-mark-empty" aria-hidden="true"></span>
+        {% endif %}
+
+        {% if selectable and not mine %}
+        <label class="shift-label" for="{{ field_id }}">
+        {% else %}
+        <span class="shift-label">
+        {% endif %}
+          <span class="shift-time">{{ shift.start_time.strftime('%H:%M') }} Uhr</span>
+          <span class="shift-meta">{{ shift.start_time.strftime('%d.%m.%Y') }}</span>
+          <span class="shift-meta">· {{ shift.duration_min }} Min.</span>
+          {% if mine %}<span class="badge badge-ok">bereits eingetragen</span>{% endif %}
+        {% if selectable and not mine %}
+        </label>
+        {% else %}
+        </span>
+        {% endif %}
+
+        <span class="shift-state">
+          <span class="occ-count {{ 'is-full' if shift.full else '' }}" data-role="count">
+            {{ shift.booked_count }}/{{ shift.required_count }}
+          </span>
+          <span class="shift-bar" data-role="bar"
+                data-required="{{ shift.required_count }}">
+            {{ progress(shift.booked_count, shift.required_count,
+                        station.name ~ ', ' ~ shift.start_time.strftime('%H:%M') ~ ' Uhr') }}
+          </span>
+          <span class="badge badge-full shift-full-badge"
+                data-role="full-badge" {% if not shift.full %}hidden{% endif %}>voll</span>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">Für diese Station sind noch keine Schichten eingeplant.</p>
+    {% endif %}
+
+  {% else %}
+    {% if station.target_count %}
+    <div class="donation-progress">
+      <span class="occ-count" data-role="don-total">{{ s.total_qty }}/{{ station.target_count }}</span>
+      <span data-role="don-bar" class="donation-bar">
+        {{ progress(s.total_qty, station.target_count, station.name, 'donation') }}
+      </span>
+      <span class="badge badge-ok" data-role="don-goal"
+            {% if s.total_qty < station.target_count %}hidden{% endif %}>Ziel erreicht</span>
+    </div>
+    {% endif %}
+
+    <p class="section-label">Bereits zugesagt</p>
+    <ul class="plain-list donation-list" data-role="don-list">
+      {% for don in s.donations %}
+      <li class="text-muted">{{ don.item_text }} (&times;{{ don.quantity }})</li>
+      {% else %}
+      <li class="text-muted"><em>Noch keine Zusagen.</em></li>
+      {% endfor %}
+    </ul>
+
+    {% if selectable %}
+    {% set d = (form.donations | default({})).get(station.id, {}) %}
+    <div class="card-grid donation-input">
+      <div>
+        <label for="{{ prefix }}-don-item-{{ station.id }}">Was möchten Sie mitbringen?</label>
+        <input type="text" id="{{ prefix }}-don-item-{{ station.id }}" name="donation_items"
+               value="{{ d.get('item', '') }}" placeholder="z.B. Marmorkuchen">
+        <input type="hidden" name="donation_station_ids" value="{{ station.id }}">
+      </div>
+      <div>
+        <label for="{{ prefix }}-don-qty-{{ station.id }}">Menge</label>
+        <input type="number" id="{{ prefix }}-don-qty-{{ station.id }}" name="donation_quantities"
+               value="{{ d.get('quantity', 1) }}" min="1" step="1">
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+</article>

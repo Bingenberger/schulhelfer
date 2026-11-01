@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Admin – Schulfest-Helfer{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <a href="#inhalt" class="skip-link">Zum Inhalt springen</a>
+  <header class="site-header">
+    <nav class="container">
+      <ul>
+        <li>
+          <strong><a href="/admin" class="contrast" style="text-decoration:none;">Schulfest-Helfer</a></strong>
+          <small class="text-muted" style="margin-left:0.5rem;">Administration</small>
+        </li>
+      </ul>
+      <ul>
+        <li><a href="/admin">Veranstaltungen</a></li>
+        <li><a href="/admin/classes">Klassen</a></li>
+        <li>
+          <form method="post" action="/admin/logout" style="display:inline">
+            {{ csrf_input(request) }}
+            <button type="submit" class="outline secondary btn-small">Abmelden</button>
+          </form>
+        </li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container" id="inhalt" style="padding-top:1.5rem; padding-bottom:3rem;">
+    {% include "partials/flash.html" %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container site-footer">
+    <div class="footer-row">
+      <small class="text-muted">Schulfest-Helfer-App &middot; Administration</small>
+      <small><a href="/">Öffentliche Ansicht</a></small>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

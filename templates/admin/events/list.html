@@ -1,0 +1,48 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Veranstaltungen – Admin{% endblock %}
+{% block content %}
+{% from "macros.html" import status_badge %}
+
+<div class="page-header">
+  <h2>Veranstaltungen</h2>
+  <div class="page-actions">
+    <a href="/admin/events/new" role="button">+ Neue Veranstaltung</a>
+  </div>
+</div>
+
+{% if events %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Datum</th>
+        <th scope="col">Status</th>
+        <th scope="col">Anmeldungen</th>
+        <th scope="col">Anmeldefrist</th>
+        <th scope="col">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td><a href="/admin/events/{{ event.id }}"><strong>{{ event.name }}</strong></a></td>
+        <td>{{ event.event_date.strftime('%d.%m.%Y') if event.event_date else '–' }}</td>
+        <td>{{ status_badge(event.status) }}</td>
+        <td>{{ participant_counts.get(event.id, 0) }}</td>
+        <td class="text-muted">{{ event.registration_deadline.strftime('%d.%m.%Y %H:%M') if event.registration_deadline else '–' }}</td>
+        <td class="cell-action">
+          <a href="/admin/events/{{ event.id }}/dashboard" role="button" class="outline btn-small">Dashboard</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<article class="empty-state">
+  <p class="text-muted">Noch keine Veranstaltungen angelegt.</p>
+  <a href="/admin/events/new" role="button">Erste Veranstaltung anlegen</a>
+</article>
+{% endif %}
+{% endblock %}

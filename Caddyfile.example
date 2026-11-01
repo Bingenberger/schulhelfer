@@ -1,0 +1,3 @@
+helfer.ggs-ndk.de {
+    reverse_proxy localhost:8000
+}

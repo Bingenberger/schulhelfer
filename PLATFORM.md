@@ -97,7 +97,7 @@ Starlette-Cookiesitzung: keine zentrale Sperrung, keine zentrale Logout-Revokati
 
 ## Lokal geprüfte Abnahme
 
-52 bestehende Fachtests und acht Vertragsprüfungen im gepinnten Runtimeumfeld.
+52 bestehende Fachtests und neun Vertragsprüfungen im gepinnten Runtimeumfeld.
 Standalone-HTTP, öffentliche Elternlinks, lokale Adminanmeldung, CSRF-Negativzugriff,
 PDF, Mail-Sink, SMTP-Ausfall, acht gleichzeitige Buchungen auf genau einen Platz,
 Neustart und Restore in ein leeres Volume wurden mit synthetischen Daten geprüft.
@@ -107,3 +107,7 @@ automatischer Domainrückfall, zwei No-op-Läufe und Stop/Start ohne Migration.
 Keine öffentliche DNS-/ACME-Prüfung, kein ARM64-Nachweis, keine globale
 Last-/Dauermessung, keine vollständige Retention-/Massenversandabnahme.
 Lizenzfreigabe, SBOM und veröffentlichter Registrydigest stehen aus.
+
+Der Retentionjob entfernt abhängige Mailprotokolle vor den Teilnehmern. Ein
+Regressionstest prüft Fremdschlüssel und wiederholte Bereinigung; ein echter
+24-Stunden-Zeitversuch wurde nicht ausgeführt.

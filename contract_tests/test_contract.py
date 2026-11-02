@@ -124,3 +124,35 @@ def test_smtp_timeout_bounds_the_entire_send(monkeypatch):
     started = time.monotonic()
     assert asyncio.run(email_service._send("synthetic@example.invalid", "Synthetic", "Synthetic", "<p>Synthetic</p>")) is False
     assert time.monotonic() - started < 3
+
+
+def test_retention_removes_dependent_mail_logs_before_participants(tmp_path):
+    path = tmp_path / "retention.db"
+    source = """from datetime import date,datetime
+from app.migrate import migrate
+migrate()
+from app.database import SessionLocal
+from app.models import Klasse,Event,Station,Shift,Participant,Booking,Donation,EmailLog
+from app.scheduler import _run_retention_cleanup
+from sqlalchemy import select,func
+with SessionLocal() as db:
+    klasse=Klasse(label='Synthetic',school_year='2000/01',active=True)
+    event=Event(name='Synthetic expired event',event_date=date(2000,1,1),status='archived',retention_weeks=1)
+    db.add_all([klasse,event]);db.flush()
+    station=Station(event_id=event.id,type='helper',name='Synthetic',sort_order=0)
+    db.add(station);db.flush()
+    shift=Shift(station_id=station.id,start_time=datetime(2000,1,1,10),duration_min=60,required_count=1,sort_order=0)
+    participant=Participant(event_id=event.id,klasse_id=klasse.id,name='Synthetic',email='synthetic@example.invalid',token_hash='synthetic-hash',token='synthetic-capability')
+    db.add_all([shift,participant]);db.flush()
+    db.add_all([Booking(participant_id=participant.id,shift_id=shift.id),Donation(participant_id=participant.id,station_id=station.id,item_text='Synthetic',quantity=1),EmailLog(participant_id=participant.id,kind='access_link',success=True)])
+    db.commit()
+_run_retention_cleanup()
+_run_retention_cleanup()
+with SessionLocal() as db:
+    for model in [Participant,Booking,Donation,EmailLog]:
+        assert db.execute(select(func.count()).select_from(model)).scalar_one()==0
+    assert db.execute(select(func.count()).select_from(Event)).scalar_one()==1
+    assert db.execute(select(func.count()).select_from(Klasse)).scalar_one()==1
+"""
+    result = call(source, path)
+    assert result.returncode == 0, result.stderr

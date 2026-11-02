@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 
 from app.database import session_factory
 from app.platform import data_lock, schema_ready
-from app.models import Booking, Donation, Event, Participant
+from app.models import Booking, Donation, EmailLog, Event, Participant
 from app.timeutil import now_local
 
 log = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ def _run_retention_cleanup():
                     select(Participant.id).where(Participant.event_id == event.id)
                 ).scalars().all()
                 if participant_ids:
+                    db.execute(delete(EmailLog).where(EmailLog.participant_id.in_(participant_ids)))
                     db.execute(delete(Booking).where(Booking.participant_id.in_(participant_ids)))
                     db.execute(delete(Donation).where(Donation.participant_id.in_(participant_ids)))
                     db.execute(delete(Participant).where(Participant.event_id == event.id))

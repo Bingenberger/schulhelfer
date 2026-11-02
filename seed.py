@@ -1,5 +1,6 @@
 """Seed-Skript: Demo-Daten anlegen (Admin, Klassen, Demo-Event)."""
 import argparse
+import getpass
 import sys
 from datetime import datetime, timedelta, date
 
@@ -92,15 +93,18 @@ def seed_demo(db):
 
 def main():
     parser = argparse.ArgumentParser(description="Schulfest-Helfer Seed-Skript")
-    parser.add_argument("--admin-user", default="admin", help="Admin-Benutzername")
-    parser.add_argument("--admin-pass", default="admin123", help="Admin-Passwort")
+    parser.add_argument("--admin-user", required=True, help="Persönlicher Admin-Benutzername")
     parser.add_argument("--demo", action="store_true", help="Demo-Daten anlegen")
     args = parser.parse_args()
 
+    with open("/dev/tty", "r+") as terminal:
+        password = getpass.getpass("Persönliches Passwort (mindestens 12 Zeichen): ", stream=terminal)
+    if len(password) < 12:
+        raise SystemExit("Passwort zu kurz")
     init_db()
     db = SessionLocal()
     try:
-        create_admin(db, args.admin_user, args.admin_pass)
+        create_admin(db, args.admin_user, password)
         if args.demo:
             seed_demo(db)
     finally:

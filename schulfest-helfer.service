@@ -7,7 +7,7 @@ Type=simple
 User=schulfest
 WorkingDirectory=/opt/schulfest
 EnvironmentFile=/opt/schulfest/.env
-ExecStart=/opt/schulfest/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8007 --proxy-headers --forwarded-allow-ips=127.0.0.1
+ExecStart=/opt/schulfest/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8007 --workers 1 --no-access-log --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=on-failure
 RestartSec=5
 

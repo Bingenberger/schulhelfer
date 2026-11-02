@@ -1,0 +1,17 @@
+*
+!requirements.lock
+!requirements-test.lock
+!app/
+!app/**
+!templates/
+!templates/**
+!static/
+!static/**
+!migrations/
+!migrations/**
+!alembic.ini
+!seed.py
+!tests/
+!tests/**
+!contract_tests/
+!contract_tests/**

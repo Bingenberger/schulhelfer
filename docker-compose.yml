@@ -1,0 +1,45 @@
+services:
+  app:
+    build: {context: ., target: final}
+    image: schulhelfer:0.1.0-dev
+    user: "10001:10001"
+    init: true
+    stop_grace_period: 130s
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    mem_limit: 384m
+    cpus: 1.0
+    pids_limit: 128
+    environment:
+      SECRET_KEY_FILE: /run/secrets/session-key
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      DATABASE_URL: sqlite:////app/data/app.db
+      PROXY_IPS: ${PROXY_IPS:-}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+      SMTP_FROM: ${SMTP_FROM:-Helfer <noreply@example.invalid>}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS_FILE: ${SMTP_PASS_FILE:-}
+      SMTP_TIMEOUT_S: ${SMTP_TIMEOUT_S:-5}
+      SMTP_SEND_DELAY_MS: ${SMTP_SEND_DELAY_MS:-400}
+      TIMEZONE: ${TIMEZONE:-Europe/Berlin}
+      ORGANISATION: ${ORGANISATION:-Das Organisationsteam}
+      PRIVACY_NOTICE_URL: ${PRIVACY_NOTICE_URL:-/datenschutz}
+    volumes:
+      - data:/app/data
+      - ${SCHULHELFER_SECRET_FILE:?private session key file required}:/run/secrets/session-key:ro
+    ports: ["127.0.0.1:${SCHULHELFER_PORT:-8007}:8000"]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+volumes:
+  data:

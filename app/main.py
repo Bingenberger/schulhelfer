@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.database import init_db
+from app.platform import schema_ready
 from app.routers import admin, public
 from app.scheduler import start_scheduler, stop_scheduler
 from app.templating import templates
@@ -23,7 +23,7 @@ app.add_middleware(
     secret_key=settings.SECRET_KEY,
     session_cookie="session",
     max_age=3600 * 8,
-    https_only=False,  # set True in production behind HTTPS proxy
+    https_only=settings.BASE_URL.startswith("https://"),
     same_site="lax",
 )
 
@@ -31,10 +31,21 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(public.router)
 app.include_router(admin.router)
 
+@app.get("/health/live")
+def live():
+    return {"status": "live"}
+
+
+@app.get("/health/ready")
+def ready():
+    from fastapi.responses import JSONResponse
+    healthy = schema_ready()
+    return JSONResponse({"status": "ready" if healthy else "migration-required"},
+                        status_code=200 if healthy else 503)
+
 
 @app.on_event("startup")
 async def startup():
-    init_db()
     start_scheduler()
 
 
@@ -68,8 +79,12 @@ async def redirect_handler(request: Request, exc):
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    if request.url.path not in ("/health/live", "/health/ready") and not schema_ready():
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"status": "migration-required"}, status_code=503)
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     return response

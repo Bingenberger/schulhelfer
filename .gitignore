@@ -27,3 +27,5 @@ htmlcov/
 .idea/
 .vscode/
 *.log
+
+.private-secrets/

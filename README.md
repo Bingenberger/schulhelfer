@@ -1,159 +1,99 @@
 # Schulfest-Helfer-App
 
-Selbst gehostete Web-App für die Helfer-Organisation bei Schulveranstaltungen.
-Eltern buchen Schichten und sagen Sachspenden zu – ohne Registrierung.
-Die Schulleitung konfiguriert Events, überwacht Füllstände und versendet Bestätigungen.
+Selbst gehostete Helferorganisation: öffentliche Veranstaltungen, Schichten,
+Sachspenden und persönliche Elternlinks; lokale Administrationsanmeldung.
 
-## Stack
+Der geprüfte Containerstand und seine Grenzen stehen in [PLATFORM.md](PLATFORM.md).
+Python 3.12.12, SQLite, genau ein Webprozess und ein exklusiver Scheduler.
+Kein Standardkonto und keine automatische Schemaänderung beim Webstart.
 
-Python 3.12 · FastAPI · Jinja2 · SQLite · Pico.css
+## Eigenständiger Dockerbetrieb
 
----
+```sh
+python3 prepare_secret.py .private-secrets
+export SCHULHELFER_SECRET_FILE="$PWD/.private-secrets/session-key"
+docker compose build
+docker compose up -d --no-build
+docker compose run --rm --no-deps app python -m app.migrate
+docker compose run --rm --no-deps app python -m app.setup_admin
+```
 
-## Setup – Nativ (empfohlen für Produktion)
+Readiness bleibt vor dem expliziten Migrationsjob 503. Die persönliche
+Erstadministration fragt Name und Passwort am Terminal ab. Sie ist einmalig.
+Der Schlüssel wird weder ausgegeben noch bei Wiederholung ersetzt.
+Das private Schlüsselverzeichnis nicht in Git aufnehmen.
 
-```bash
+Nur 127.0.0.1:${SCHULHELFER_PORT:-8007} wird veröffentlicht.
+BASE_URL auf die vollständige Origin des eigenen Proxys setzen.
+Bei HTTPS setzt die App Secure-Cookies automatisch. SMTP zeigt ohne eigene
+Konfiguration auf einen separat bereitzustellenden lokalen Mail-Sink mailpit:1025,
+ohne Upstream. App, Datenvolume und Secretdatei bleiben eigenständig.
+
+## Nativer Betrieb
+
+In einer Python-3.12-Umgebung für linux/amd64:
+
+```sh
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
+. .venv/bin/activate
+pip install --require-hashes -r requirements.lock
+python3 prepare_secret.py .private-secrets
 cp .env.example .env
-# .env anpassen (SECRET_KEY, SMTP-Daten, BASE_URL)
-
-# Datenbank initialisieren und Admin anlegen:
-python seed.py --admin-user admin --admin-pass SICHERESPASSWORT
-
-# Optional: Demo-Daten
-python seed.py --demo
-
-# Server starten
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+# BASE_URL und private Schlüsseldatei in .env prüfen; ausschließlich eigener Mail-Sink.
+python -m app.migrate
+python -m app.setup_admin
+uvicorn app.main:app --host 127.0.0.1 --port 8007 --workers 1 --no-access-log
 ```
 
-### systemd-Unit
+Bei Proxybetrieb nur die tatsächlichen Proxy-IP-Adressen ausdrücklich freigeben.
+Die systemd- und Proxydateien sind Beispiele; Bestandskonfigurationen vor einer
+Übernahme prüfen. Ein nicht versioniertes Bestands-SQLite-Schema wird nicht
+automatisch übernommen. Bestehende IDs und Elternlinks nicht durch Demo-Seeding ersetzen.
 
-```bash
-sudo cp schulfest-helfer.service /etc/systemd/system/
-sudo systemctl enable --now schulfest-helfer
+## Migration, Tests und Export
+
+Anwendungsmigration nur über `python -m app.migrate`, bei pausierten Writern.
+Der Job verwendet die geprüfte Alembic-Kette mit exklusiver Sperre.
+Unbekannte Schema-Versionen blockieren die Freigabe.
+Neue Migrationen können mit Alembic entwickelt werden, benötigen aber eine
+eigene Prüfung und neue Releasefreigabe.
+
+```sh
+pip install --require-hashes -r requirements-test.lock
+# Nur synthetischer Testschlüssel, keine Produktivdatei:
+SECRET_KEY=synthetic-session-fixture-key-0123456789 pytest tests/ contract_tests/
 ```
 
-### Caddy als Reverse-Proxy
+Der Integrationsnachweis verwendet getrennte Testläufe für Fachsuite und
+Vertragsprüfungen in einem isolierten Testimage. SMTP ist in Fachtests absichtlich
+unerreichbar. Echte lokale Sink-Zustellung und parallele Buchungen sind separat
+im Plattformrepository nachgewiesen. PDF ist auf einen Slot im einzigen
+Webprozess begrenzt; belegter Slot ergibt 503 mit Retry-After.
 
-```bash
-# Caddyfile.example nach /etc/caddy/Caddyfile kopieren und anpassen
-sudo systemctl reload caddy
-```
+## Sicherung, Retention und Mail
 
-### nginx als Reverse-Proxy
+SQLite ausschließlich über die .backup-API sichern, niemals die laufende Datei
+mit cp kopieren. Mit passendem Sicherungsdienst koordiniert Writer pausieren.
+Die eigenständige Datenbank liegt unter data/app.db, im Container unter
+/app/data/app.db. Session-Schlüssel und Konfiguration zusätzlich privat sichern.
+Restore in eine leere Umgebung und mit passendem Image prüfen. Ein Image-Rollback
+macht keine DB-Migration rückgängig.
 
-```bash
-sudo cp nginx.conf.example /etc/nginx/sites-available/schulfest-helfer
-sudo ln -s /etc/nginx/sites-available/schulfest-helfer /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+Retention läuft alle 24 Stunden und soll Teilnehmerdaten nach dem konfigurierten
+Zeitraum entfernen. Eine vollständige Retention-Abnahme steht aus.
+Mailversand läuft als BackgroundTask mit Gesamtzeitlimit und Zustellprotokoll.
+Es gibt noch keine persistente Outbox für Prozessausfälle; fehlgeschlagene
+Bestätigungsmails lassen sich über den vorhandenen Verwaltungsweg wiederholen.
+Ein SMTP-Ausfall beeinflusst die eigene Datenbank-Readiness nicht.
 
-# TLS per Let's Encrypt (baut die Config automatisch auf HTTPS inkl. Redirect um):
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d helfer.ggs-ndk.de
-```
+BASE_URL, DATABASE_URL, SECRET_KEY und SMTP_* bleiben gültige Konfigurationsnamen.
+Für Secrets bevorzugt SECRET_KEY_FILE und SMTP_PASS_FILE verwenden.
+Bei Compose eine zusätzliche SMTP-Passwortdatei nur über einen ausdrücklichen
+schreibgeschützten Mount bereitstellen. Kein externer SMTP-Upstream im Testaufbau.
 
-Sobald HTTPS aktiv ist: `https_only=True` in `app/main.py` setzen und den Dienst
-neu starten (die systemd-Unit übergibt uvicorn bereits `--proxy-headers`, damit
-`X-Forwarded-Proto` von nginx ausgewertet wird).
-
----
-
-## Setup – Docker
-
-```bash
-cp .env.example .env
-# .env anpassen
-
-docker build -t schulfest-helfer .
-docker run -d \
-  --name schulfest-helfer \
-  -p 127.0.0.1:8000:8000 \
-  -v $(pwd)/data:/app/data \
-  --env-file .env \
-  schulfest-helfer
-
-# Admin anlegen (einmalig):
-docker exec schulfest-helfer python seed.py --admin-user admin --admin-pass SICHERESPASSWORT
-```
-
----
-
-## Alembic-Migrationen
-
-```bash
-# Neue Migration generieren
-alembic revision --autogenerate -m "beschreibung"
-
-# Migrationen anwenden
-alembic upgrade head
-```
-
----
-
-## Tests
-
-```bash
-pytest tests/ -v
-```
-
----
-
-## Betrieb
-
-### Backup der SQLite-Datei
-
-Die gesamte Datenbank liegt in `data/app.db`. Tägliches Backup per cron:
-
-```cron
-0 3 * * * cp /opt/schulfest-helfer/data/app.db /backup/app-$(date +\%Y\%m\%d).db
-```
-
-### Datenlöschung (Retention)
-
-Der eingebaute APScheduler läuft täglich und löscht automatisch `Participant`-, `Booking`- und `Donation`-Datensätze, sobald `event.retention_weeks` Wochen nach dem `event_date` vergangen sind. Kein manueller Eingriff nötig.
-
-### E-Mail (Strato)
-
-```env
-SMTP_HOST=smtp.strato.de
-SMTP_PORT=465
-SMTP_STARTTLS=false
-SMTP_USE_TLS=true
-SMTP_USER=helfer@ggs-ndk.de
-SMTP_PASS=<Postfach-Passwort>
-```
-
-Strato bietet auf Port 465 ausschließlich implizites TLS (SMTPS) an, kein
-STARTTLS – deshalb `SMTP_USE_TLS=true` **und** `SMTP_STARTTLS=false`. Bei
-einem anderen Provider mit STARTTLS auf Port 587 ist es umgekehrt.
-
-DKIM wird über DNS-Eintrag der Schule aktiviert – kein App-seitiger Aufwand.
-
-### Zeitzone
-
-Alle Datums- und Zeitangaben werden als lokale Wandzeit gespeichert und verglichen.
-Maßgeblich ist `TIMEZONE` in der `.env` (Standard `Europe/Berlin`). Eine auf 18:00
-gesetzte Anmeldefrist endet damit tatsächlich um 18:00 Ortszeit.
-
-### Sicherheitshinweise
-
-- `SECRET_KEY` muss ein langer Zufallswert sein: `python -c "import secrets; print(secrets.token_hex(32))"`
-- Hinter HTTPS-Proxy betreiben (Caddy/nginx)
-- `https_only=True` in `app/main.py` setzen, sobald HTTPS aktiv ist
-- Zustandsändernde Admin-Formulare sind CSRF-geschützt (Token in der Session).
-  Öffentliche Formulare bleiben ohne Token, damit die Anmeldung auch bei
-  restriktiven Cookie-Einstellungen funktioniert; sie sind über den geheimen
-  Zugangslink bzw. die Duplikatsprüfung abgesichert.
-- Das Zugangstoken wird zusätzlich im Klartext gespeichert (`participant.token`),
-  damit der Link der Eltern über die gesamte Laufzeit stabil bleibt – auch beim
-  Veröffentlichen. Wer die Datenbank lesen kann, sieht ohnehin alle Daten, auf
-  die ein solcher Link Zugriff gibt.
-
----
+Eltern-Capabilities werden für Wiederholversand weiterhin auch im Klartext in der
+Datenbank gespeichert. Datenbank und Archive schützen. Tokenisierte Pfade nicht
+in Accesslogs schreiben. Es gibt keine zentrale Sperrung oder Logout-Revokation.
 
 ## Routen
 

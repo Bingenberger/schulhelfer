@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -39,7 +40,7 @@ async def _send(to_addr: str, subject: str, text_body: str, html_body: str) -> b
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     try:
-        await aiosmtplib.send(
+        await asyncio.wait_for(aiosmtplib.send(
             msg,
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
@@ -50,17 +51,20 @@ async def _send(to_addr: str, subject: str, text_body: str, html_body: str) -> b
             username=settings.SMTP_USER or None,
             password=settings.SMTP_PASS or None,
             timeout=settings.SMTP_TIMEOUT_S,
-        )
+        ), timeout=settings.SMTP_TIMEOUT_S)
         return True
-    except Exception:
-        log.exception("E-Mail-Versand fehlgeschlagen an %s", to_addr)
+    except Exception as exc:
+        log.error("E-Mail-Versand fehlgeschlagen (%s); SMTP-Zustand prüfen", type(exc).__name__)
         return False
 
 
 def _log_email(db: Session, participant: Participant, kind: str, success: bool):
-    entry = EmailLog(participant_id=participant.id, kind=kind, success=success)
-    db.add(entry)
-    db.commit()
+    # SMTP awaits may outlive a SQLite read snapshot. Record delivery in a fresh
+    # write transaction, never upgrade the stale reader after the network await.
+    from app.database import session_factory
+    with session_factory() as writer:
+        writer.add(EmailLog(participant_id=participant.id, kind=kind, success=success))
+        writer.commit()
 
 
 # ─── Zusammenfassung der Buchungen ────────────────────────────────────────────
@@ -265,8 +269,10 @@ async def deliver(kind: str, participant_id: int, token: str) -> None:
         if participant is None:
             log.warning("Teilnehmer %d nicht mehr vorhanden – Mail entfällt", participant_id)
             return
+        # Release the eagerly loaded reader before SMTP to avoid pool exhaustion.
+        db.close()
         await sender(db, participant, token)
-    except Exception:
-        log.exception("Hintergrund-Mailversand fehlgeschlagen (%s, %d)", kind, participant_id)
+    except Exception as exc:
+        log.error("Hintergrund-Mailversand fehlgeschlagen (%s, %d, %s)", kind, participant_id, type(exc).__name__)
     finally:
         db.close()

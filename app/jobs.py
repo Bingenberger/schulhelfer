@@ -85,11 +85,11 @@ async def send_confirmations(event_id: int, only_unsent: bool = False) -> None:
             try:
                 await send_confirmation(db, participant, token)
             except Exception:
-                log.exception("Bestätigung an %s fehlgeschlagen", participant.email)
+                log.error("Bestätigung fehlgeschlagen; Teilnehmer-ID %d", participant.id)
             await asyncio.sleep(settings.SMTP_SEND_DELAY_MS / 1000)
         log.info("Bestätigungsversand für Event %d abgeschlossen", event_id)
     except Exception:
-        log.exception("Bestätigungsversand für Event %d abgebrochen", event_id)
+        log.error("Bestätigungsversand für Event %d abgebrochen", event_id)
     finally:
         db.close()
 

@@ -11,7 +11,9 @@ from app.main import app
 from app.models import AdminUser, Event, Klasse, Shift, Station
 from app.security import hash_password, generate_token, hash_token
 
-TEST_DB_URL = "sqlite:///./data/test.db"
+import os
+TEST_DB_URL = os.environ.get("TEST_DATABASE_URL", "sqlite:///./data/test.db")
+os.makedirs(os.path.dirname(TEST_DB_URL.removeprefix("sqlite:///")) or ".", exist_ok=True)
 
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -31,6 +33,9 @@ app.dependency_overrides[get_db] = override_get_db
 # app.database – die muss ebenfalls auf die Test-Datenbank zeigen.
 import app.database as _database
 _database.SessionLocal = TestingSessionLocal
+_database.engine = engine
+_settings_config = __import__("app.config", fromlist=["settings"]).settings
+_settings_config.DATABASE_URL = TEST_DB_URL
 
 # Kein echter Mailversand in Tests: Zustellung schlägt sofort fehl und wird
 # – wie im Betrieb – als Fehlschlag im email_log protokolliert.
@@ -45,6 +50,12 @@ _settings.SMTP_SEND_DELAY_MS = 0
 def setup_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    from app.platform import HEAD, SCHEMA
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE IF NOT EXISTS alembic_version(version_num VARCHAR(32) PRIMARY KEY)")
+        connection.exec_driver_sql("DELETE FROM alembic_version")
+        connection.exec_driver_sql("INSERT INTO alembic_version VALUES (?)", (HEAD,))
+        connection.exec_driver_sql("PRAGMA user_version=" + str(SCHEMA))
     db = TestingSessionLocal()
 
     # Admin

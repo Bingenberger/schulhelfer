@@ -6,7 +6,7 @@ from app.models import AdminUser
 from app.security import verify_csrf
 
 
-def get_current_admin(request: Request, db: Session = Depends(get_db)) -> AdminUser:
+def get_current_admin(request: Request, db: Session = Depends(get_db, scope="function")) -> AdminUser:
     admin_id = request.session.get("admin_id")
     if not admin_id:
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/admin/login"})
@@ -17,7 +17,7 @@ def get_current_admin(request: Request, db: Session = Depends(get_db)) -> AdminU
     return admin
 
 
-def require_admin(request: Request, db: Session = Depends(get_db)) -> AdminUser:
+def require_admin(request: Request, db: Session = Depends(get_db, scope="function")) -> AdminUser:
     return get_current_admin(request, db)
 
 

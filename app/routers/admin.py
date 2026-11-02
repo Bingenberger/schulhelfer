@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
+from app.export_limit import pdf_slot
 from app.dependencies import require_admin, require_csrf
 from app.flash import ERROR, INFO, SUCCESS, WARNING, flash
 from app.jobs import confirmation_progress, send_confirmations
@@ -66,7 +67,7 @@ async def login_post(
     request: Request,
     username: Annotated[str, Form()] = "",
     password: Annotated[str, Form()] = "",
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     ip = request.client.host if request.client else "unknown"
     if not _check_login_rate(ip):
@@ -99,7 +100,7 @@ async def logout(request: Request, _csrf: None = CSRF):
 @router.get("", response_class=HTMLResponse)
 async def event_list(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     events = db.execute(select(Event).order_by(Event.event_date.desc())).scalars().all()
@@ -158,7 +159,7 @@ def _validate_event(name: str, event_date: str, registration_deadline: str) -> d
 @router.post("/events/new", response_class=HTMLResponse)
 async def event_new_post(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     name: Annotated[str, Form()] = "",
@@ -200,7 +201,7 @@ async def event_new_post(
 async def event_detail(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     event = db.execute(
@@ -240,7 +241,7 @@ async def event_detail(
 async def event_edit_get(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     event = _get_event(event_id, db)
@@ -255,7 +256,7 @@ async def event_edit_get(
 async def event_edit_post(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     name: Annotated[str, Form()] = "",
@@ -295,7 +296,7 @@ async def event_edit_post(
 async def event_delete(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -329,7 +330,7 @@ async def event_status(
     event_id: int,
     background: BackgroundTasks,
     new_status: Annotated[str, Form()] = "",
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -371,7 +372,7 @@ async def event_status(
 async def station_new(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     station_type: Annotated[str, Form()] = "helper",
@@ -411,7 +412,7 @@ async def station_new(
 async def station_edit(
     request: Request,
     station_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     name: Annotated[str, Form()] = "",
@@ -441,7 +442,7 @@ async def station_edit(
 async def station_delete(
     request: Request,
     station_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -470,7 +471,7 @@ async def station_delete(
 async def stations_copy(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     source_event_id: Annotated[int, Form()] = 0,
@@ -541,7 +542,7 @@ async def stations_copy(
 async def shift_new(
     request: Request,
     station_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     start_time: Annotated[str, Form()] = "",
@@ -577,7 +578,7 @@ async def shift_new(
 async def shift_series(
     request: Request,
     station_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     series_date: Annotated[str, Form()] = "",
@@ -652,7 +653,7 @@ async def shift_series(
 async def shift_edit(
     request: Request,
     shift_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     start_time: Annotated[str, Form()] = "",
@@ -696,7 +697,7 @@ async def shift_edit(
 async def shift_delete(
     request: Request,
     shift_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -729,7 +730,7 @@ async def shift_delete(
 async def dashboard(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     event = db.execute(
@@ -785,7 +786,7 @@ async def dashboard(
 async def booking_add_manual(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     participant_id: Annotated[int, Form()] = 0,
@@ -836,7 +837,7 @@ async def booking_delete_manual(
     request: Request,
     booking_id: int,
     event_id: Annotated[int, Form()],
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -860,7 +861,7 @@ async def booking_delete_manual(
 async def event_close(
     request: Request,
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -879,7 +880,7 @@ async def event_publish(
     request: Request,
     event_id: int,
     background: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -907,7 +908,7 @@ async def event_resend(
     request: Request,
     event_id: int,
     background: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -927,7 +928,7 @@ async def event_resend(
 @router.get("/events/{event_id}/export.csv")
 async def export_csv(
     event_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     event = _get_event(event_id, db)
@@ -975,9 +976,10 @@ async def export_csv(
 
 
 @router.get("/events/{event_id}/export.pdf")
-async def export_pdf(
+def export_pdf(
     event_id: int,
-    db: Session = Depends(get_db),
+    _slot: None = Depends(pdf_slot),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     from reportlab.lib import colors
@@ -1073,7 +1075,7 @@ async def export_pdf(
 @router.get("/classes", response_class=HTMLResponse)
 async def classes_list(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
 ):
     klassen = db.execute(select(Klasse).order_by(Klasse.school_year, Klasse.label)).scalars().all()
@@ -1093,7 +1095,7 @@ async def classes_list(
 @router.post("/classes/new")
 async def klasse_new(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     label: Annotated[str, Form()] = "",
@@ -1123,7 +1125,7 @@ async def klasse_new(
 async def klasse_edit(
     request: Request,
     klasse_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     label: Annotated[str, Form()] = "",
@@ -1156,7 +1158,7 @@ async def klasse_edit(
 async def klasse_delete(
     request: Request,
     klasse_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
 ):
@@ -1191,7 +1193,7 @@ async def klasse_delete(
 @router.post("/classes/import")
 async def klasse_import(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     admin: AdminUser = Depends(require_admin),
     _csrf: None = CSRF,
     file: UploadFile = File(...),

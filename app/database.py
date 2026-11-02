@@ -43,6 +43,6 @@ def get_db():
 
 
 def init_db():
-    os.makedirs("data", exist_ok=True)
-    from app import models  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    from app.platform import schema_ready
+    if not schema_ready():
+        raise RuntimeError("Run python -m app.migrate explicitly before initializing application data")

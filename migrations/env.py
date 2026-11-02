@@ -32,6 +32,12 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
+    existing = config.attributes.get("connection")
+    if existing is not None:
+        context.configure(connection=existing, target_metadata=target_metadata, transactional_ddl=True)
+        with context.begin_transaction():
+            context.run_migrations()
+        return
     cfg = config.get_section(config.config_ini_section, {})
     cfg["sqlalchemy.url"] = settings.DATABASE_URL
 

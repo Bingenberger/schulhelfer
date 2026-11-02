@@ -179,7 +179,7 @@ def _event_page(
 # ─── Öffentliche Startseite ───────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request, db: Session = Depends(get_db)):
+async def index(request: Request, db: Session = Depends(get_db, scope="function")):
     """Einstieg für Eltern – nicht der Admin-Login.
 
     Wer einen abgelaufenen Zugangslink anklickt, landet über die Fehlerseite
@@ -203,7 +203,7 @@ async def index(request: Request, db: Session = Depends(get_db)):
 # ─── Veranstaltungsseite ──────────────────────────────────────────────────────
 
 @router.get("/e/{event_id}", response_class=HTMLResponse)
-async def event_view(request: Request, event_id: int, db: Session = Depends(get_db)):
+async def event_view(request: Request, event_id: int, db: Session = Depends(get_db, scope="function")):
     event = _get_event(event_id, db)
     if event.status not in ("open", "closed", "published"):
         raise HTTPException(status_code=404, detail="Veranstaltung nicht gefunden")
@@ -220,7 +220,7 @@ async def event_code(
     request: Request,
     event_id: int,
     code: Annotated[str, Form()] = "",
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     event = _get_event(event_id, db)
     if not event.access_code:
@@ -243,7 +243,7 @@ async def event_book(
     request: Request,
     event_id: int,
     background: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     name: Annotated[str, Form()] = "",
     email: Annotated[str, Form()] = "",
     klasse_id: Annotated[int | None, Form()] = None,
@@ -417,7 +417,7 @@ async def recover_global_post(
     request: Request,
     background: BackgroundTasks,
     email: Annotated[str, Form()] = "",
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     ip = request.client.host if request.client else "unknown"
     if _check_rate(ip):
@@ -431,7 +431,7 @@ async def recover_global_post(
 
 
 @router.get("/e/{event_id}/recover", response_class=HTMLResponse)
-async def recover_get(request: Request, event_id: int, db: Session = Depends(get_db)):
+async def recover_get(request: Request, event_id: int, db: Session = Depends(get_db, scope="function")):
     event = _get_event(event_id, db)
     return templates.TemplateResponse(request, "event/recover.html", {"event": event})
 
@@ -442,7 +442,7 @@ async def recover_post(
     event_id: int,
     background: BackgroundTasks,
     email: Annotated[str, Form()] = "",
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     event = _get_event(event_id, db)
     ip = request.client.host if request.client else "unknown"
@@ -488,7 +488,7 @@ def _invalid_token(request: Request):
 
 
 @router.get("/s/{token}", response_class=HTMLResponse)
-async def status_view(request: Request, token: str, db: Session = Depends(get_db)):
+async def status_view(request: Request, token: str, db: Session = Depends(get_db, scope="function")):
     participant = _load_participant(token, db)
     if not participant:
         return _invalid_token(request)
@@ -513,7 +513,7 @@ async def status_add(
     request: Request,
     token: str,
     background: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
     shift_ids: Annotated[list[int], Form()] = [],
     donation_station_ids: Annotated[list[int], Form()] = [],
     donation_items: Annotated[list[str], Form()] = [],
@@ -594,7 +594,7 @@ async def status_cancel(
     background: BackgroundTasks,
     booking_id: Annotated[int | None, Form()] = None,
     donation_id: Annotated[int | None, Form()] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     participant = _load_participant(token, db)
     if not participant:
@@ -638,7 +638,7 @@ async def status_donation_edit(
     background: BackgroundTasks,
     item_text: Annotated[str, Form()] = "",
     quantity: Annotated[int, Form()] = 1,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     """Zusage korrigieren, statt sie löschen und neu anlegen zu müssen."""
     participant = _load_participant(token, db)
@@ -670,7 +670,7 @@ async def status_donation_edit(
 # ─── Live-Belegung ────────────────────────────────────────────────────────────
 
 @router.get("/e/{event_id}/availability")
-async def availability(event_id: int, db: Session = Depends(get_db)):
+async def availability(event_id: int, db: Session = Depends(get_db, scope="function")):
     """Aktuelle Belegung als JSON.
 
     Die Seite aktualisiert damit Zählerstände, Fortschrittsbalken und volle

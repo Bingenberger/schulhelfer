@@ -156,3 +156,52 @@ with SessionLocal() as db:
 """
     result = call(source, path)
     assert result.returncode == 0, result.stderr
+
+
+LEGACY = """
+import sqlite3, sys
+from sqlalchemy import create_engine
+from app.database import Base
+from app import models
+engine = create_engine('sqlite:///' + sys.argv[1])
+Base.metadata.create_all(engine)          # exactly what the old init_db() did on every start
+with sqlite3.connect(sys.argv[1]) as db:
+    db.execute("INSERT INTO event(id,name,event_date,status,retention_weeks,created_at) VALUES(1,'Schulfest','2026-06-20','open',8,'2026-05-01')")
+    db.execute("INSERT INTO klasse(id,label,school_year,active) VALUES(1,'1a','2025/26',1)")
+    db.execute("INSERT INTO participant(id,event_id,name,email,klasse_id,token_hash,created_at) VALUES(1,1,'Eltern','e@x.invalid',1,'h','2026-05-02')")
+"""
+
+
+def legacy_database(path, drop_token=False):
+    result = subprocess.run([sys.executable, "-c", LEGACY, str(path)], capture_output=True, text=True, timeout=30,
+                            env=os.environ | {"SECRET_KEY": "synthetic-session-fixture-key-0123456789"})
+    assert result.returncode == 0, result.stderr
+    if drop_token:
+        with sqlite3.connect(path) as db:
+            db.execute("ALTER TABLE participant DROP COLUMN token")
+
+
+@pytest.mark.parametrize("drop_token,revision", [(False, "b7c2e9a41d38"), (True, "a5ef5d7feb55")])
+def test_create_all_database_of_the_old_version_is_adopted(tmp_path, drop_token, revision):
+    # Real old server: app.db built by create_all (no alembic_version); the import was refused.
+    path = tmp_path / "app.db"
+    legacy_database(path, drop_token)
+    result = call("from app.migrate import migrate;migrate();migrate();from app.platform import schema_ready;assert schema_ready()", path)
+    assert result.returncode == 0, result.stderr
+    assert f"adopted as {revision}" in result.stdout
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("b7c2e9a41d38",)
+        assert db.execute("SELECT name, email FROM participant").fetchall() == [("Eltern", "e@x.invalid")]
+        assert "token" in [row[1] for row in db.execute("PRAGMA table_info(participant)")]
+
+
+def test_adoption_refuses_a_structure_that_matches_no_known_revision(tmp_path):
+    path = tmp_path / "app.db"
+    legacy_database(path)
+    with sqlite3.connect(path) as db:
+        db.execute("ALTER TABLE booking ADD COLUMN note TEXT")
+    result = call("from app.migrate import migrate;migrate()", path)
+    assert result.returncode != 0 and "booking" in result.stderr
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT name FROM sqlite_master WHERE name='alembic_version'").fetchall() == []
+        assert db.execute("SELECT count(*) FROM participant").fetchone() == (1,)

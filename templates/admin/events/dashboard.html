@@ -9,22 +9,22 @@
       <a href="/admin">Veranstaltungen</a> /
       <a href="/admin/events/{{ event.id }}">{{ event.name }}</a> /
     </p>
-    <h2>Dashboard</h2>
+    <h1>{{ icon('chart-bar') }} Dashboard</h1>
   </div>
   <div class="page-actions">
-    <a href="/admin/events/{{ event.id }}/export.csv" role="button" class="outline">CSV-Export</a>
-    <a href="/admin/events/{{ event.id }}/export.pdf" role="button" class="outline">PDF-Export</a>
+    <a href="/admin/events/{{ event.id }}/export.csv" role="button" class="outline">{{ icon('file-csv') }} CSV-Export</a>
+    <a href="/admin/events/{{ event.id }}/export.pdf" role="button" class="outline">{{ icon('file-pdf') }} PDF-Export</a>
     {% if event.status == 'open' %}
     <form method="post" action="/admin/events/{{ event.id }}/close">
       {{ csrf_input(request) }}
-      <button type="submit" class="outline">Anmeldung schließen</button>
+      <button type="submit" class="outline">{{ icon('lock-simple') }} Anmeldung schließen</button>
     </form>
     {% endif %}
     {% if event.status == 'closed' %}
     <form method="post" action="/admin/events/{{ event.id }}/publish"
           onsubmit="return confirm('Helferplan veröffentlichen und {{ participant_count }} Bestätigungsmails versenden?')">
       {{ csrf_input(request) }}
-      <button type="submit">Plan veröffentlichen &amp; Mails senden</button>
+      <button type="submit">{{ icon('paper-plane-tilt') }} Plan veröffentlichen &amp; Mails senden</button>
     </form>
     {% endif %}
   </div>
@@ -32,18 +32,22 @@
 
 <div class="stat-row">
   <div class="stat">
+    <span class="stat-icon tone-primary">{{ icon('users-three', fill=true) }}</span>
     <span class="stat-value">{{ participant_count }}</span>
     <span class="stat-label">Anmeldungen</span>
   </div>
   <div class="stat {{ 'is-alert' if understaffed else 'is-ok' }}">
+    <span class="stat-icon {{ 'tone-danger' if understaffed else 'tone-success' }}">{{ icon('warning' if understaffed else 'check-circle', fill=true) }}</span>
     <span class="stat-value">{{ understaffed }}</span>
     <span class="stat-label">Unterbesetzte Schichten</span>
   </div>
   <div class="stat">
+    <span class="stat-icon tone-neutral">{{ icon('flag', fill=true) }}</span>
     <span class="stat-value">{{ status_badge(event.status) }}</span>
     <span class="stat-label">Status</span>
   </div>
   <div class="stat">
+    <span class="stat-icon tone-accent">{{ icon('link', fill=true) }}</span>
     <span class="stat-value stat-link"><a href="/e/{{ event.id }}" target="_blank" rel="noopener">/e/{{ event.id }}</a></span>
     <span class="stat-label">Öffentlicher Link</span>
   </div>
@@ -54,7 +58,7 @@
    durchgelaufen ist. #}
 <div class="mail-progress {{ 'has-failures' if mail_progress.failed else '' }}">
   <div class="mail-progress-head">
-    <strong>Bestätigungsmails</strong>
+    <strong>{{ icon('envelope-simple') }} Bestätigungsmails</strong>
     <span class="text-muted">
       {{ mail_progress.sent }} von {{ mail_progress.total }} versandt{% if mail_progress.failed %},
       {{ mail_progress.failed }} fehlgeschlagen{% endif %}{% if mail_progress.pending > 0 %},
@@ -65,7 +69,7 @@
   {% if mail_progress.failed or mail_progress.pending %}
   <form method="post" action="/admin/events/{{ event.id }}/resend" style="margin-top:0.6rem;">
     {{ csrf_input(request) }}
-    <button type="submit" class="outline btn-small">Offene Mails erneut senden</button>
+    <button type="submit" class="outline btn-small">{{ icon('arrow-clockwise') }} Offene Mails erneut senden</button>
   </form>
   {% endif %}
 </div>
@@ -74,12 +78,15 @@
 {% for station in event.stations %}
 <article>
   <header class="station-head">
-    <div>
+    <span class="station-icon {{ 'tone-primary' if station.type == 'helper' else 'tone-accent' }}">
+      {{ icon('users-three' if station.type == 'helper' else 'gift', fill=true) }}
+    </span>
+    <span class="station-title">
       <strong>{{ station.name }}</strong>
-      <span class="badge {{ 'badge-neutral' if station.type == 'helper' else 'badge-warn' }}">
+      <span class="badge {{ 'badge-primary' if station.type == 'helper' else 'badge-warn' }}">
         {{ 'Helfer-Station' if station.type == 'helper' else 'Spenden-Station' }}
       </span>
-    </div>
+    </span>
   </header>
 
   {% if station.type == 'helper' %}
@@ -103,11 +110,11 @@
             <div class="occ-line">
               <span class="occ-strong">{{ booked }}/{{ shift.required_count }}</span>
               {% if booked < shift.required_count %}
-              <span class="badge badge-danger">unterbesetzt</span>
+              <span class="badge badge-danger">{{ icon('warning') }}unterbesetzt</span>
               {% elif booked == shift.required_count %}
-              <span class="badge badge-ok">voll</span>
+              <span class="badge badge-ok">{{ icon('check') }}voll</span>
               {% else %}
-              <span class="badge badge-warn">überbelegt</span>
+              <span class="badge badge-warn">{{ icon('arrow-fat-line-up') }}überbelegt</span>
               {% endif %}
             </div>
             {{ progress(booked, shift.required_count, station.name ~ ' ' ~ shift.start_time.strftime('%H:%M')) }}
@@ -126,7 +133,7 @@
                   {# event_id gehört ins Formular, nicht in die Query –
                      sonst antwortet die Route mit einem 422-Fehler. #}
                   <input type="hidden" name="event_id" value="{{ event.id }}">
-                  <button type="submit" class="outline contrast btn-tiny">Stornieren</button>
+                  <button type="submit" class="outline contrast btn-tiny">{{ icon('x') }} Stornieren</button>
                 </form>
               </li>
               {% else %}
@@ -136,7 +143,7 @@
 
             {% if participants %}
             <details class="add-helper">
-              <summary>+ Helfer eintragen</summary>
+              <summary>{{ icon('user-plus') }} Helfer eintragen</summary>
               <form method="post" action="/admin/events/{{ event.id }}/bookings/add" class="inline-edit">
                 {{ csrf_input(request) }}
                 <label class="visually-hidden" for="add-p-{{ shift.id }}">Teilnehmer</label>
@@ -147,7 +154,7 @@
                   {% endfor %}
                 </select>
                 <input type="hidden" name="shift_id" value="{{ shift.id }}">
-                <button type="submit" class="outline btn-small">Eintragen</button>
+                <button type="submit" class="outline btn-small">{{ icon('check') }} Eintragen</button>
               </form>
             </details>
             {% endif %}
@@ -166,11 +173,11 @@
     <span>Gesamt: <strong>{{ total_qty.val }}</strong>{% if station.target_count %} / {{ station.target_count }}{% endif %}</span>
     {% if station.target_count %}
       {% if total_qty.val < station.target_count %}
-      <span class="badge badge-danger">unter Ziel</span>
+      <span class="badge badge-danger">{{ icon('arrow-down') }}unter Ziel</span>
       {% elif total_qty.val > station.target_count %}
-      <span class="badge badge-warn">überzeichnet</span>
+      <span class="badge badge-warn">{{ icon('arrow-fat-line-up') }}überzeichnet</span>
       {% else %}
-      <span class="badge badge-ok">Ziel erreicht</span>
+      <span class="badge badge-ok">{{ icon('trophy') }}Ziel erreicht</span>
       {% endif %}
     {% endif %}
   </div>
@@ -207,8 +214,9 @@
 </article>
 {% else %}
 <article class="empty-state">
+  <span class="empty-icon">{{ icon('squares-four') }}</span>
   <p class="text-muted">Für diese Veranstaltung sind keine Stationen eingerichtet.</p>
-  <a href="/admin/events/{{ event.id }}" role="button" class="outline">Stationen anlegen</a>
+  <a href="/admin/events/{{ event.id }}" role="button" class="outline">{{ icon('plus') }} Stationen anlegen</a>
 </article>
 {% endfor %}
 

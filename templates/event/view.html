@@ -2,20 +2,23 @@
 {% block title %}{{ event.name }}{% endblock %}
 {% block content %}
 
-<hgroup class="page-intro">
-  <h1>{{ event.name }}</h1>
-  <p class="text-muted">
-    {% if event.event_date %}{{ event.event_date.strftime('%d.%m.%Y') }}{% endif %}
-    {% if event.location %}&nbsp;&middot;&nbsp;{{ event.location }}{% endif %}
-  </p>
-</hgroup>
-
-{% if event.description %}
-<p>{{ event.description }}</p>
-{% endif %}
+<section class="hero hero-compact">
+  <div class="hero-text">
+    <p class="hero-kicker">{{ icon('confetti', fill=true) }} Helfer-Anmeldung</p>
+    <h1>{{ event.name }}</h1>
+    <p class="hero-meta">
+      {% if event.event_date %}<span>{{ icon('calendar-blank') }} {{ event.event_date.strftime('%d.%m.%Y') }}</span>{% endif %}
+      {% if event.location %}<span>{{ icon('map-pin') }} {{ event.location }}</span>{% endif %}
+    </p>
+    {% if event.description %}
+    <p class="hero-desc">{{ event.description }}</p>
+    {% endif %}
+  </div>
+</section>
 
 {% if not code_ok %}
 <article class="narrow">
+  <span class="link-card-icon tone-accent">{{ icon('lock-key', fill=true) }}</span>
   <h2>Zugangscode erforderlich</h2>
   <p class="text-muted">Diese Veranstaltung ist zugangsbeschränkt. Den Code finden Sie
   im Elternbrief zur Veranstaltung.</p>
@@ -24,7 +27,7 @@
     <div class="form-row form-row-2">
       <input type="text" id="code" name="code" required placeholder="Code eingeben"
              autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
-      <button type="submit">Bestätigen</button>
+      <button type="submit">{{ icon('check') }} Bestätigen</button>
     </div>
   </form>
 </article>
@@ -33,10 +36,10 @@
 
 {% if error %}
 <div class="error-box" role="alert">
-  <p style="margin:0;">{{ error }}</p>
+  <p style="margin:0;">{{ icon('warning-circle', fill=true) }} {{ error }}</p>
   {% if show_recovery %}
   <p style="margin:0.5rem 0 0;">
-    <a href="/e/{{ event.id }}/recover">Zugangslink anfordern &rarr;</a>
+    <a href="/e/{{ event.id }}/recover">Zugangslink anfordern {{ icon('arrow-right') }}</a>
   </p>
   {% endif %}
 </div>
@@ -44,7 +47,7 @@
 
 {% if field_errors %}
 <div class="error-box" role="alert">
-  <p style="margin:0 0 0.25rem;"><strong>Bitte prüfen Sie Ihre Eingaben:</strong></p>
+  <p style="margin:0 0 0.25rem;"><strong>{{ icon('warning-circle', fill=true) }} Bitte prüfen Sie Ihre Eingaben:</strong></p>
   <ul>
     {% for field, message in field_errors.items() %}
     <li><a href="#{{ field }}">{{ message }}</a></li>
@@ -55,6 +58,7 @@
 
 {% if event.status != 'open' %}
 <div class="info-box">
+  {{ icon('info', fill=true) }}
   {% if event.status == 'published' %}
   Der Helferplan wurde veröffentlicht. Danke an alle, die sich angemeldet haben!
   {% else %}
@@ -63,12 +67,14 @@
 </div>
 {% elif deadline_passed %}
 <div class="info-box">
+  {{ icon('hourglass-low', fill=true) }}
   Die Anmeldefrist ist am
   {{ event.registration_deadline.strftime('%d.%m.%Y um %H:%M') }} Uhr abgelaufen.
   Neue Anmeldungen sind nicht mehr möglich.
 </div>
 {% elif event.registration_deadline %}
 <div class="info-box">
+  {{ icon('hourglass-medium', fill=true) }}
   Anmeldung möglich bis <strong>{{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr</strong>.
 </div>
 {% endif %}
@@ -78,7 +84,7 @@
       data-availability="/e/{{ event.id }}/availability">
 
   <fieldset class="panel-block">
-    <legend><h2>Ihre Daten</h2></legend>
+    <legend><h2><span class="step-num">1</span> Ihre Daten</h2></legend>
     <p class="text-muted">Mit * markierte Felder sind Pflichtfelder.</p>
 
     <div class="card-grid">
@@ -120,8 +126,8 @@
   </fieldset>
 
   <div class="section-head">
-    <h2>Stationen</h2>
-    <small class="text-muted" data-role="updated">Belegung wird laufend aktualisiert.</small>
+    <h2><span class="step-num">2</span> Schichten &amp; Spenden wählen</h2>
+    <small class="text-muted live-hint" data-role="updated">Belegung wird laufend aktualisiert.</small>
   </div>
 
   <div id="stations" aria-live="polite">
@@ -137,7 +143,7 @@
   <div class="overlap-warning" id="overlap-warning" hidden role="alert"></div>
 
   <fieldset class="panel-block">
-    <legend><h2>Datenschutz</h2></legend>
+    <legend><h2><span class="step-num">3</span> Datenschutz</h2></legend>
     <label for="privacy_accepted" class="checkbox-row">
       <input type="checkbox" id="privacy_accepted" name="privacy_accepted" value="1" required
              {% if form.privacy_accepted %}checked{% endif %}
@@ -151,7 +157,7 @@
   </fieldset>
 
   <div class="submit-bar">
-    <button type="submit">Verbindlich anmelden</button>
+    <button type="submit">{{ icon('paper-plane-tilt') }} Verbindlich anmelden</button>
     <span class="text-muted" data-role="selection-summary"></span>
   </div>
 </form>
@@ -159,7 +165,7 @@
 {% else %}
 
 <div class="section-head">
-  <h2>Stationen</h2>
+  <h2>{{ icon('squares-four') }} Stationen</h2>
   <small class="text-muted" data-role="updated"></small>
 </div>
 <div id="stations" data-availability="/e/{{ event.id }}/availability" aria-live="polite">
@@ -174,7 +180,7 @@
 {% endif %}
 
 <p class="footnote">
-  Sie sind bereits angemeldet und haben Ihren Link verlegt?
+  {{ icon('key') }} Sie sind bereits angemeldet und haben Ihren Link verlegt?
   <a href="/e/{{ event.id }}/recover">Zugangslink neu anfordern</a>
 </p>
 

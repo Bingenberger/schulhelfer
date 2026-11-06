@@ -2,15 +2,11 @@
    einer gerade ausgeführten Aktion mitbekommen. #}
 {% set messages = get_flashes(request) %}
 {% if messages %}
+{% set flash_icons = {'success': 'check-circle', 'error': 'x-circle', 'warning': 'warning-circle'} %}
 <div class="flash-stack" role="status" aria-live="polite">
   {% for m in messages %}
   <div class="flash flash-{{ m.category }}">
-    <span class="flash-icon" aria-hidden="true">
-      {%- if m.category == 'success' %}✓
-      {%- elif m.category == 'error' %}!
-      {%- elif m.category == 'warning' %}!
-      {%- else %}i{% endif -%}
-    </span>
+    <span class="flash-icon">{{ icon(flash_icons.get(m.category, 'info'), fill=true) }}</span>
     <span>{{ m.message }}</span>
   </div>
   {% endfor %}

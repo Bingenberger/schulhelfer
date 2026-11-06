@@ -6,32 +6,32 @@
 <div class="page-header">
   <div>
     <p class="breadcrumb"><a href="/admin">Veranstaltungen</a> /</p>
-    <h2>{{ event.name }}</h2>
+    <h1>{{ event.name }}</h1>
   </div>
   <div class="page-actions">
-    <a href="/admin/events/{{ event.id }}/edit" role="button" class="outline">Bearbeiten</a>
-    <a href="/admin/events/{{ event.id }}/dashboard" role="button">Dashboard</a>
+    <a href="/admin/events/{{ event.id }}/edit" role="button" class="outline">{{ icon('pencil-simple') }} Bearbeiten</a>
+    <a href="/admin/events/{{ event.id }}/dashboard" role="button">{{ icon('chart-bar') }} Dashboard</a>
   </div>
 </div>
 
 <dl class="meta-grid">
-  <dt>Datum</dt>
+  <dt>{{ icon('calendar-blank') }} Datum</dt>
   <dd>{{ event.event_date.strftime('%d.%m.%Y') if event.event_date else '–' }}</dd>
-  <dt>Ort</dt>
+  <dt>{{ icon('map-pin') }} Ort</dt>
   <dd>{{ event.location or '–' }}</dd>
-  <dt>Status</dt>
+  <dt>{{ icon('flag') }} Status</dt>
   <dd>{{ status_badge(event.status) }}</dd>
-  <dt>Anmeldefrist</dt>
+  <dt>{{ icon('hourglass-medium') }} Anmeldefrist</dt>
   <dd>{{ event.registration_deadline.strftime('%d.%m.%Y %H:%M') if event.registration_deadline else '–' }}
     <small class="text-muted">(Ortszeit)</small></dd>
-  <dt>Zugangscode</dt>
+  <dt>{{ icon('lock-key') }} Zugangscode</dt>
   <dd>{{ event.access_code or '(keiner)' }}</dd>
-  <dt>Öffentlicher Link</dt>
+  <dt>{{ icon('link') }} Öffentlicher Link</dt>
   <dd><a href="/e/{{ event.id }}" target="_blank" rel="noopener">/e/{{ event.id }}</a></dd>
-  <dt>Datenlöschung</dt>
+  <dt>{{ icon('shield-check') }} Datenlöschung</dt>
   <dd>{{ event.retention_weeks }} Wochen nach Event</dd>
   {% if event.description %}
-  <dt>Beschreibung</dt>
+  <dt>{{ icon('text-align-left') }} Beschreibung</dt>
   <dd>{{ event.description }}</dd>
   {% endif %}
 </dl>
@@ -41,7 +41,7 @@
 {% set trans_labels = {'open':'Anmeldung öffnen','closed':'Anmeldung schließen','published':'Veröffentlichen','archived':'Archivieren'} %}
 {% if next_statuses %}
 <div class="status-actions">
-  <span class="label">Statuswechsel:</span>
+  <span class="label">{{ icon('arrows-left-right') }} Statuswechsel:</span>
   {% for next_status in next_statuses %}
   <form method="post" action="/admin/events/{{ event.id }}/status" style="display:inline">
     {{ csrf_input(request) }}
@@ -55,10 +55,10 @@
 </div>
 {% endif %}
 
-<p class="section-title">Stationen &amp; Schichten</p>
+<p class="section-title">{{ icon('squares-four') }} Stationen &amp; Schichten</p>
 
 <details class="panel">
-  <summary>Neue Station anlegen</summary>
+  <summary>{{ icon('plus-circle') }} Neue Station anlegen</summary>
   <div class="panel-body">
     <form method="post" action="/admin/events/{{ event.id }}/stations/new">
       {{ csrf_input(request) }}
@@ -79,7 +79,7 @@
           <input type="number" id="new-station-target" name="target_count" min="1" placeholder="–">
         </div>
         <div>
-          <button type="submit" style="white-space:nowrap;">+ Station</button>
+          <button type="submit" style="white-space:nowrap;">{{ icon('plus') }} Station</button>
         </div>
       </div>
       <div style="margin-top:0.5rem;">
@@ -93,7 +93,7 @@
 
 {% if other_events %}
 <details class="panel">
-  <summary>Aufbau aus einer früheren Veranstaltung übernehmen</summary>
+  <summary>{{ icon('copy') }} Aufbau aus einer früheren Veranstaltung übernehmen</summary>
   <div class="panel-body">
     <p class="text-muted">
       Kopiert Stationen (und auf Wunsch die Schichten) einer anderen Veranstaltung.
@@ -114,7 +114,7 @@
           </select>
         </div>
         <div>
-          <button type="submit" style="white-space:nowrap;">Übernehmen</button>
+          <button type="submit" style="white-space:nowrap;">{{ icon('copy') }} Übernehmen</button>
         </div>
       </div>
       <label class="checkbox-row" style="margin-top:0.5rem;">
@@ -129,9 +129,12 @@
 {% for station in event.stations %}
 <article class="station" id="station-{{ station.id }}">
   <header class="station-head">
-    <div>
+    <span class="station-icon {{ 'tone-primary' if station.type == 'helper' else 'tone-accent' }}">
+      {{ icon('users-three' if station.type == 'helper' else 'gift', fill=true) }}
+    </span>
+    <div class="station-title">
       <strong>{{ station.name }}</strong>
-      <span class="badge {{ 'badge-neutral' if station.type == 'helper' else 'badge-warn' }}">
+      <span class="badge {{ 'badge-primary' if station.type == 'helper' else 'badge-warn' }}">
         {{ 'Helfer' if station.type == 'helper' else 'Spende' }}
       </span>
       {% if station.target_count %}
@@ -144,12 +147,12 @@
     <form method="post" action="/admin/stations/{{ station.id }}/delete"
           onsubmit="return confirm('Station „{{ station.name }}“ mit allen Schichten und Buchungen löschen?')">
       {{ csrf_input(request) }}
-      <button type="submit" class="outline contrast btn-small">Löschen</button>
+      <button type="submit" class="outline contrast btn-small">{{ icon('trash') }} Löschen</button>
     </form>
   </header>
 
   <details class="panel inner">
-    <summary>Station bearbeiten</summary>
+    <summary>{{ icon('pencil-simple') }} Station bearbeiten</summary>
     <div class="panel-body">
       <form method="post" action="/admin/stations/{{ station.id }}/edit">
         {{ csrf_input(request) }}
@@ -173,7 +176,7 @@
                    value="{{ station.sort_order }}" min="0">
             {% endif %}
           </div>
-          <div><button type="submit">Speichern</button></div>
+          <div><button type="submit">{{ icon('floppy-disk') }} Speichern</button></div>
         </div>
         {% if station.type == 'donation' %}
         <input type="hidden" name="sort_order" value="{{ station.sort_order }}">
@@ -214,7 +217,7 @@
               <input type="number" id="sh-req-{{ shift.id }}" name="required_count"
                      value="{{ shift.required_count }}" min="1" required class="input-narrow">
               <input type="hidden" name="sort_order" value="{{ shift.sort_order }}">
-              <button type="submit" class="outline btn-small">Speichern</button>
+              <button type="submit" class="outline btn-small" aria-label="Schicht speichern">{{ icon('floppy-disk') }} <span class="hide-sm">Speichern</span></button>
             </form>
           </td>
           <td>
@@ -230,7 +233,7 @@
             <form method="post" action="/admin/shifts/{{ shift.id }}/delete"
                   onsubmit="return confirm({% if booked %}'Diese Schicht hat {{ booked }} eingetragene Helfer. Schicht und Buchungen löschen?'{% else %}'Schicht löschen?'{% endif %})">
               {{ csrf_input(request) }}
-              <button type="submit" class="outline contrast btn-small">Löschen</button>
+              <button type="submit" class="outline contrast btn-small">{{ icon('trash') }} Löschen</button>
             </form>
           </td>
         </tr>
@@ -243,7 +246,7 @@
   {% endif %}
 
   <details class="panel inner" {% if not station.shifts %}open{% endif %}>
-    <summary>Schichtreihe anlegen</summary>
+    <summary>{{ icon('rows') }} Schichtreihe anlegen</summary>
     <div class="panel-body">
       <p class="text-muted">
         Legt für den angegebenen Zeitraum alle Schichten auf einmal an –
@@ -266,7 +269,7 @@
             <input type="time" id="ser-to-{{ station.id }}" name="series_to" value="18:00" required>
           </div>
           <div>
-            <button type="submit" style="white-space:nowrap;">+ Reihe</button>
+            <button type="submit" style="white-space:nowrap;">{{ icon('plus') }} Reihe</button>
           </div>
         </div>
         <div class="form-row form-row-2" style="margin-top:0.5rem;">
@@ -284,7 +287,7 @@
   </details>
 
   <details class="panel inner">
-    <summary>Einzelne Schicht hinzufügen</summary>
+    <summary>{{ icon('clock') }} Einzelne Schicht hinzufügen</summary>
     <div class="panel-body">
       <form method="post" action="/admin/stations/{{ station.id }}/shifts/new">
         {{ csrf_input(request) }}
@@ -301,7 +304,7 @@
             <label for="new-req-{{ station.id }}">Soll-Personen</label>
             <input type="number" id="new-req-{{ station.id }}" name="required_count" value="1" min="1" required>
           </div>
-          <div><button type="submit">+ Schicht</button></div>
+          <div><button type="submit">{{ icon('plus') }} Schicht</button></div>
         </div>
         <input type="hidden" name="sort_order" value="{{ station.shifts|length }}">
       </form>
@@ -311,17 +314,18 @@
 </article>
 {% else %}
 <article class="empty-state">
+  <span class="empty-icon">{{ icon('squares-four') }}</span>
   <p class="text-muted">Noch keine Stationen angelegt.</p>
 </article>
 {% endfor %}
 
-<p class="section-title" style="margin-top:2rem;">Gefahrenzone</p>
+<p class="section-title" style="margin-top:2rem;">{{ icon('warning-octagon') }} Gefahrenzone</p>
 <div class="danger-zone">
   <p>Die Veranstaltung und alle zugehörigen Daten werden unwiderruflich gelöscht.</p>
   <form method="post" action="/admin/events/{{ event.id }}/delete"
         onsubmit="return confirm('Veranstaltung „{{ event.name }}“ und alle Anmeldungen unwiderruflich löschen?')">
     {{ csrf_input(request) }}
-    <button type="submit" class="outline contrast btn-small">Veranstaltung löschen</button>
+    <button type="submit" class="outline contrast btn-small">{{ icon('trash') }} Veranstaltung löschen</button>
   </form>
 </div>
 

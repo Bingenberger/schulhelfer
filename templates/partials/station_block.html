@@ -17,13 +17,18 @@
 <article class="station" id="station-{{ station.id }}" data-station="{{ station.id }}"
          data-type="{{ s.type }}">
   <header class="station-head">
-    <strong>{{ station.name }}</strong>
-    <span class="badge {{ 'badge-neutral' if s.type == 'helper' else 'badge-warn' }}">
-      {{ 'Helfer' if s.type == 'helper' else 'Sachspende' }}
+    <span class="station-icon {{ 'tone-primary' if s.type == 'helper' else 'tone-accent' }}">
+      {{ icon('users-three' if s.type == 'helper' else 'gift', fill=true) }}
     </span>
-    {% if station.description %}
-    <p class="text-muted station-desc">{{ station.description }}</p>
-    {% endif %}
+    <span class="station-title">
+      <strong>{{ station.name }}</strong>
+      <span class="badge {{ 'badge-primary' if s.type == 'helper' else 'badge-warn' }}">
+        {{ 'Helfer' if s.type == 'helper' else 'Sachspende' }}
+      </span>
+      {% if station.description %}
+      <span class="text-muted station-desc">{{ station.description }}</span>
+      {% endif %}
+    </span>
   </header>
 
   {% if s.type == 'helper' %}
@@ -43,7 +48,7 @@
                {% if checked %}checked{% endif %}
                {% if shift.full and not checked %}disabled{% endif %}>
         {% elif mine %}
-        <span class="shift-mark" aria-hidden="true">✓</span>
+        <span class="shift-mark">{{ icon('check-circle', fill=true) }}</span>
         {% else %}
         <span class="shift-mark shift-mark-empty" aria-hidden="true"></span>
         {% endif %}
@@ -53,10 +58,10 @@
         {% else %}
         <span class="shift-label">
         {% endif %}
-          <span class="shift-time">{{ shift.start_time.strftime('%H:%M') }} Uhr</span>
+          <span class="shift-time">{{ icon('clock') }} {{ shift.start_time.strftime('%H:%M') }} Uhr</span>
           <span class="shift-meta">{{ shift.start_time.strftime('%d.%m.%Y') }}</span>
           <span class="shift-meta">· {{ shift.duration_min }} Min.</span>
-          {% if mine %}<span class="badge badge-ok">bereits eingetragen</span>{% endif %}
+          {% if mine %}<span class="badge badge-ok">{{ icon('check') }}bereits eingetragen</span>{% endif %}
         {% if selectable and not mine %}
         </label>
         {% else %}
@@ -90,7 +95,7 @@
         {{ progress(s.total_qty, station.target_count, station.name, 'donation') }}
       </span>
       <span class="badge badge-ok" data-role="don-goal"
-            {% if s.total_qty < station.target_count %}hidden{% endif %}>Ziel erreicht</span>
+            {% if s.total_qty < station.target_count %}hidden{% endif %}>{{ icon('trophy') }}Ziel erreicht</span>
     </div>
     {% endif %}
 

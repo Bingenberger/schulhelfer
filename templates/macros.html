@@ -6,7 +6,14 @@
     'published': 'Veröffentlicht',
     'archived':  'Archiviert'
   } -%}
-  <span class="status-badge status-{{ status }}">{{ labels[status] if status in labels else status }}</span>
+  {%- set icons = {
+    'draft':     'pencil-simple-line',
+    'open':      'door-open',
+    'closed':    'lock-simple',
+    'published': 'megaphone-simple',
+    'archived':  'archive'
+  } -%}
+  <span class="status-badge status-{{ status }}">{{ icon(icons.get(status, 'circle')) }}{{ labels[status] if status in labels else status }}</span>
 {%- endmacro %}
 
 {# Fortschrittsbalken mit ARIA-Rolle: der Balken allein ist für Screenreader

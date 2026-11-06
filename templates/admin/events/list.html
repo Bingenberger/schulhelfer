@@ -4,9 +4,9 @@
 {% from "macros.html" import status_badge %}
 
 <div class="page-header">
-  <h2>Veranstaltungen</h2>
+  <h1>{{ icon('calendar-blank') }} Veranstaltungen</h1>
   <div class="page-actions">
-    <a href="/admin/events/new" role="button">+ Neue Veranstaltung</a>
+    <a href="/admin/events/new" role="button">{{ icon('plus') }} Neue Veranstaltung</a>
   </div>
 </div>
 
@@ -29,10 +29,10 @@
         <td><a href="/admin/events/{{ event.id }}"><strong>{{ event.name }}</strong></a></td>
         <td>{{ event.event_date.strftime('%d.%m.%Y') if event.event_date else '–' }}</td>
         <td>{{ status_badge(event.status) }}</td>
-        <td>{{ participant_counts.get(event.id, 0) }}</td>
+        <td><span class="count-pill">{{ icon('users') }} {{ participant_counts.get(event.id, 0) }}</span></td>
         <td class="text-muted">{{ event.registration_deadline.strftime('%d.%m.%Y %H:%M') if event.registration_deadline else '–' }}</td>
         <td class="cell-action">
-          <a href="/admin/events/{{ event.id }}/dashboard" role="button" class="outline btn-small">Dashboard</a>
+          <a href="/admin/events/{{ event.id }}/dashboard" role="button" class="outline btn-small">{{ icon('chart-bar') }} Dashboard</a>
         </td>
       </tr>
       {% endfor %}
@@ -41,8 +41,9 @@
 </div>
 {% else %}
 <article class="empty-state">
+  <span class="empty-icon">{{ icon('calendar-plus') }}</span>
   <p class="text-muted">Noch keine Veranstaltungen angelegt.</p>
-  <a href="/admin/events/new" role="button">Erste Veranstaltung anlegen</a>
+  <a href="/admin/events/new" role="button">{{ icon('plus') }} Erste Veranstaltung anlegen</a>
 </article>
 {% endif %}
 {% endblock %}

@@ -4,6 +4,7 @@
 {# Diese Seite war eine Sackgasse: Sie nannte die Wiederherstellung, verlinkte
    sie aber nicht, und führte über "/" auf den Admin-Login. #}
 <article class="narrow center spaced">
+  <span class="empty-icon tone-warn">{{ icon('link-break') }}</span>
   <h2>Dieser Zugangslink ist nicht mehr gültig</h2>
   <p class="text-muted">
     Das passiert, wenn Sie zwischenzeitlich einen neuen Link angefordert haben
@@ -11,8 +12,8 @@
   </p>
   <p>Ihre Anmeldung ist davon nicht betroffen – Sie brauchen nur einen neuen Link.</p>
   <div class="btn-row centered">
-    <a href="/wiederherstellen" role="button">Neuen Zugangslink anfordern</a>
-    <a href="/" role="button" class="outline secondary">Zur Übersicht</a>
+    <a href="/wiederherstellen" role="button">{{ icon('key') }} Neuen Zugangslink anfordern</a>
+    <a href="/" role="button" class="outline secondary">{{ icon('house') }} Zur Übersicht</a>
   </div>
 </article>
 {% endblock %}

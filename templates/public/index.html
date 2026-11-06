@@ -1,62 +1,83 @@
 {% extends "base.html" %}
 {% block title %}Schulfest-Helfer{% endblock %}
 {% block content %}
-{% from "macros.html" import status_badge %}
+{% set months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'] %}
 
-<hgroup class="page-intro">
-  <h1>Helfer-Anmeldung</h1>
-  <p class="text-muted">Hier tragen Sie sich für Schichten ein und sagen Sachspenden zu.</p>
-</hgroup>
+<section class="hero">
+  <div class="hero-text">
+    <p class="hero-kicker">{{ icon('hand-heart', fill=true) }} Gemeinsam feiern</p>
+    <h1>Helfer-Anmeldung</h1>
+    <p>Hier tragen Sie sich für Schichten ein und sagen Sachspenden zu.</p>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <span class="hero-bubble b1">{{ icon('cake', fill=true) }}</span>
+    <span class="hero-bubble b2">{{ icon('balloon', fill=true) }}</span>
+    <span class="hero-bubble b3">{{ icon('music-notes', fill=true) }}</span>
+  </div>
+</section>
 
 {% if events %}
+<h2 class="section-heading">{{ icon('calendar-star') }} Aktuelle Veranstaltungen</h2>
 <ul class="event-cards">
   {% for event in events %}
   <li>
     <a href="/e/{{ event.id }}" class="event-card">
-      <span class="event-card-head">
-        <strong>{{ event.name }}</strong>
-        {% if booking_open_map.get(event.id) %}
-        <span class="badge badge-ok">Anmeldung offen</span>
-        {% elif event.status == 'published' %}
-        <span class="badge badge-neutral">Plan veröffentlicht</span>
-        {% else %}
-        <span class="badge badge-neutral">Anmeldung geschlossen</span>
-        {% endif %}
+      {% if event.event_date %}
+      <span class="date-tile" aria-hidden="true">
+        <span class="date-tile-month">{{ months[event.event_date.month - 1] }}</span>
+        <span class="date-tile-day">{{ event.event_date.day }}</span>
       </span>
-      <span class="text-muted">
-        {% if event.event_date %}{{ event.event_date.strftime('%d.%m.%Y') }}{% endif %}
-        {% if event.location %}&nbsp;&middot;&nbsp;{{ event.location }}{% endif %}
-      </span>
-      {% if event.registration_deadline and booking_open_map.get(event.id) %}
-      <span class="text-muted">
-        Anmeldung bis {{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr
-      </span>
+      {% else %}
+      <span class="date-tile" aria-hidden="true">{{ icon('calendar-blank') }}</span>
       {% endif %}
+      <span class="event-card-body">
+        <span class="event-card-head">
+          <strong>{{ event.name }}</strong>
+          {% if booking_open_map.get(event.id) %}
+          <span class="badge badge-ok">{{ icon('door-open') }}Anmeldung offen</span>
+          {% elif event.status == 'published' %}
+          <span class="badge badge-neutral">{{ icon('megaphone-simple') }}Plan veröffentlicht</span>
+          {% else %}
+          <span class="badge badge-neutral">{{ icon('lock-simple') }}Anmeldung geschlossen</span>
+          {% endif %}
+        </span>
+        <span class="event-card-meta">
+          {% if event.event_date %}<span>{{ icon('calendar-blank') }} {{ event.event_date.strftime('%d.%m.%Y') }}</span>{% endif %}
+          {% if event.location %}<span>{{ icon('map-pin') }} {{ event.location }}</span>{% endif %}
+          {% if event.registration_deadline and booking_open_map.get(event.id) %}
+          <span>{{ icon('hourglass-medium') }} Anmeldung bis {{ event.registration_deadline.strftime('%d.%m.%Y, %H:%M') }} Uhr</span>
+          {% endif %}
+        </span>
+      </span>
+      <span class="event-card-go" aria-hidden="true">{{ icon('arrow-right') }}</span>
     </a>
   </li>
   {% endfor %}
 </ul>
 {% else %}
 <article class="empty-state">
+  <span class="empty-icon">{{ icon('calendar-x') }}</span>
   <p class="text-muted">Zurzeit steht keine Veranstaltung zur Anmeldung offen.</p>
 </article>
 {% endif %}
 
 <div class="link-cards">
-  <article>
+  <article class="link-card">
+    <span class="link-card-icon tone-accent">{{ icon('key', fill=true) }}</span>
     <h2>Zugangslink verlegt?</h2>
     <p class="text-muted">
       Wenn Ihr gespeicherter Link nicht mehr funktioniert, fordern Sie mit Ihrer
       E-Mail-Adresse einen neuen an.
     </p>
-    <a href="/wiederherstellen" role="button" class="outline">Zugangslink anfordern</a>
+    <a href="/wiederherstellen" role="button" class="outline">{{ icon('envelope-simple') }} Zugangslink anfordern</a>
   </article>
-  <article>
+  <article class="link-card">
+    <span class="link-card-icon tone-neutral">{{ icon('users-three', fill=true) }}</span>
     <h2>Organisationsteam</h2>
     <p class="text-muted">
       Sie verwalten die Veranstaltungen und den Helferplan?
     </p>
-    <a href="/admin" role="button" class="outline secondary">Zur Administration</a>
+    <a href="/admin" role="button" class="outline secondary">{{ icon('gear-six') }} Zur Administration</a>
   </article>
 </div>
 

@@ -1,31 +1,32 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
+  {% include "partials/head.html" %}
   <title>{% block title %}Schulfest-Helfer{% endblock %}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
   <a href="#inhalt" class="skip-link">Zum Inhalt springen</a>
   <header class="site-header">
     <nav class="container">
       <ul>
-        <li><strong><a href="/" class="contrast" style="text-decoration:none;">Schulfest-Helfer</a></strong></li>
+        <li>
+          <a href="/" class="brand">
+            <span class="brand-mark">{{ icon('confetti', fill=true) }}</span>
+            <span class="brand-name">Schulfest-Helfer</span>
+          </a>
+        </li>
       </ul>
       {% block nav_extra %}<ul></ul>{% endblock %}
     </nav>
   </header>
-  <main class="container" id="inhalt" style="padding-top:1.5rem; padding-bottom:3rem;">
+  <main class="container site-main" id="inhalt">
     {% include "partials/flash.html" %}
     {% block content %}{% endblock %}
   </main>
   <footer class="container site-footer">
     <div class="footer-row">
-      <small class="text-muted">Schulfest-Helfer-App</small>
-      <small><a href="/wiederherstellen">Zugangslink wiederherstellen</a></small>
+      <small class="text-muted">{{ icon('heart') }} Schulfest-Helfer-App</small>
+      <small><a href="/wiederherstellen">{{ icon('key') }} Zugangslink wiederherstellen</a></small>
     </div>
   </footer>
   {% block scripts %}{% endblock %}

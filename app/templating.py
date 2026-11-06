@@ -23,6 +23,18 @@ def csrf_input(request: Request) -> Markup:
     )
 
 
+def icon(name: str, fill: bool = False, cls: str = "") -> Markup:
+    """Phosphor-Icon (lokal unter /static/vendor/phosphor eingebunden).
+
+    Rein dekorativ und daher für Screenreader ausgeblendet: Die Bedeutung
+    muss immer zusätzlich im Text stehen.
+    """
+    weight = "ph-fill" if fill else "ph"
+    extra = f" {escape(cls)}" if cls else ""
+    return Markup(f'<i class="{weight} ph-{escape(name)}{extra}" aria-hidden="true"></i>')
+
+
 templates.env.globals["csrf_input"] = csrf_input
+templates.env.globals["icon"] = icon
 templates.env.globals["get_flashes"] = get_flashes
 templates.env.globals["settings"] = settings

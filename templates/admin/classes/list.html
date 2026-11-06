@@ -3,13 +3,13 @@
 {% block content %}
 
 <div class="page-header">
-  <h2>Klassenliste</h2>
+  <h1>{{ icon('graduation-cap') }} Klassenliste</h1>
 </div>
 
 <div class="card-grid" style="margin-bottom:1.5rem;">
   <article>
     <hgroup>
-      <h3>Neue Klasse</h3>
+      <h3>{{ icon('plus-circle') }} Neue Klasse</h3>
       <p>Einzeln anlegen</p>
     </hgroup>
     <form method="post" action="/admin/classes/new">
@@ -24,7 +24,7 @@
           <input type="text" id="new-year" name="school_year" placeholder="z.B. 2026/27" required>
         </div>
         <div>
-          <button type="submit" aria-label="Klasse anlegen">+</button>
+          <button type="submit" aria-label="Klasse anlegen">{{ icon('plus') }}</button>
         </div>
       </div>
       <label class="checkbox-row" style="margin-top:0.5rem;">
@@ -36,7 +36,7 @@
 
   <article>
     <hgroup>
-      <h3>CSV-Import</h3>
+      <h3>{{ icon('file-csv') }} CSV-Import</h3>
       <p>Spalten: <code>label</code>, <code>school_year</code></p>
     </hgroup>
     <form method="post" action="/admin/classes/import" enctype="multipart/form-data">
@@ -48,7 +48,7 @@
         Erste Zeile als Spaltenüberschrift. Komma oder Semikolon als Trenner.
         Bereits vorhandene Klassen werden übersprungen.
       </small>
-      <button type="submit" style="margin-top:0.5rem;">Importieren</button>
+      <button type="submit" style="margin-top:0.5rem;">{{ icon('upload-simple') }} Importieren</button>
     </form>
   </article>
 </div>
@@ -73,9 +73,9 @@
         <td>{{ k.school_year }}</td>
         <td>
           {% if k.active %}
-          <span class="badge badge-ok">Aktiv</span>
+          <span class="badge badge-ok">{{ icon('check') }}Aktiv</span>
           {% else %}
-          <span class="badge badge-neutral">Inaktiv</span>
+          <span class="badge badge-neutral">{{ icon('pause') }}Inaktiv</span>
           {% endif %}
         </td>
         <td>{{ in_use }}</td>
@@ -87,20 +87,20 @@
               <input type="hidden" name="school_year" value="{{ k.school_year }}">
               <input type="hidden" name="active" value="{{ '1' if not k.active else '' }}">
               <button type="submit" class="outline btn-small">
-                {{ 'Deaktivieren' if k.active else 'Aktivieren' }}
+                {{ icon('pause' if k.active else 'play') }} {{ 'Deaktivieren' if k.active else 'Aktivieren' }}
               </button>
             </form>
             {% if in_use %}
             {# Löschen würde am Fremdschlüssel scheitern – gar nicht erst anbieten. #}
             <button type="button" class="outline contrast btn-small" disabled
                     title="{{ in_use }} Anmeldung(en) verweisen auf diese Klasse. Deaktivieren Sie sie stattdessen.">
-              Löschen
+              {{ icon('trash') }} Löschen
             </button>
             {% else %}
             <form method="post" action="/admin/classes/{{ k.id }}/delete"
                   onsubmit="return confirm('Klasse {{ k.label }} löschen?')" style="display:inline">
               {{ csrf_input(request) }}
-              <button type="submit" class="outline contrast btn-small">Löschen</button>
+              <button type="submit" class="outline contrast btn-small">{{ icon('trash') }} Löschen</button>
             </form>
             {% endif %}
           </div>
@@ -112,6 +112,7 @@
 </div>
 {% else %}
 <article class="empty-state">
+  <span class="empty-icon">{{ icon('graduation-cap') }}</span>
   <p class="text-muted">Noch keine Klassen angelegt. Eltern können sich erst anmelden,
   wenn mindestens eine aktive Klasse existiert.</p>
 </article>

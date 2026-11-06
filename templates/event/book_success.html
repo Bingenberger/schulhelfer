@@ -8,7 +8,7 @@
 <article class="narrow-wide">
   {# Steht auch nur eine Buchung aus, wäre ein reines "Vielen Dank" irreführend. #}
   <div class="success-hero {{ 'is-partial' if partial else '' }}">
-    <p class="hero-mark" aria-hidden="true">{{ '!' if partial else '✓' }}</p>
+    <p class="hero-mark">{{ icon('warning-circle' if partial else 'confetti', fill=true) }}</p>
     {% if partial %}
     <h2>Anmeldung teilweise übernommen</h2>
     <p class="text-muted">
@@ -25,26 +25,26 @@
 
   {% if partial %}
   <div class="error-box" role="alert">
-    <p style="margin:0 0 0.25rem;"><strong>Nicht übernommen:</strong></p>
+    <p style="margin:0 0 0.25rem;"><strong>{{ icon('x-circle', fill=true) }} Nicht übernommen:</strong></p>
     <ul>{% for e in booking_errors %}<li>{{ e }}</li>{% endfor %}</ul>
     <p style="margin:0.6rem 0 0;">
-      <a href="/e/{{ event.id }}">Andere Schicht auswählen &rarr;</a>
+      <a href="/e/{{ event.id }}">Andere Schicht auswählen {{ icon('arrow-right') }}</a>
     </p>
   </div>
   {% endif %}
 
-  <p class="section-title">Das ist eingetragen</p>
+  <p class="section-title">{{ icon('list-checks') }} Das ist eingetragen</p>
   {% if booking_count or donation_count %}
   <ul class="summary-list">
     {% for booking in participant.bookings | sort(attribute='shift.start_time') %}
-    <li>
+    <li>{{ icon('users-three', cls='summary-icon') }}
       <strong>{{ booking.shift.station.name }}</strong>
       – {{ booking.shift.start_time.strftime('%d.%m.%Y, %H:%M') }} Uhr
       <span class="text-muted">({{ booking.shift.duration_min }} Min.)</span>
     </li>
     {% endfor %}
     {% for don in participant.donations %}
-    <li>
+    <li>{{ icon('gift', cls='summary-icon') }}
       <strong>{{ don.station.name }}</strong>
       – {{ don.item_text }} <span class="text-muted">(&times;{{ don.quantity }})</span>
     </li>
@@ -52,25 +52,27 @@
   </ul>
   {% else %}
   <div class="info-box">
+    {{ icon('info', fill=true) }}
     Sie sind angemeldet, haben aber noch keine Schicht und keine Sachspende ausgewählt.
     Über Ihren Zugangslink können Sie das jederzeit nachholen.
   </div>
   {% endif %}
 
-  <p class="section-title">Ihr persönlicher Zugangslink</p>
+  <p class="section-title">{{ icon('link') }} Ihr persönlicher Zugangslink</p>
   <p>Über diesen Link können Sie Ihre Buchungen jederzeit einsehen, ergänzen oder stornieren:</p>
   <div class="token-box">
+    {{ icon('link-simple', cls='token-icon') }}
     <a href="{{ base_url }}/s/{{ token }}">{{ base_url }}/s/{{ token }}</a>
   </div>
 
   <div class="success-box">
-    <strong>Link sichern!</strong> Bitte speichern Sie diesen Link als Lesezeichen.
+    {{ icon('bookmark-simple', fill=true) }} <strong>Link sichern!</strong> Bitte speichern Sie diesen Link als Lesezeichen.
     Eine Kopie mit dieser Übersicht geht an Ihre E-Mail-Adresse.
   </div>
 
   <div class="btn-row" style="margin-top:1.5rem;">
-    <a href="/s/{{ token }}" role="button">Meine Anmeldung ansehen</a>
-    <a href="/e/{{ event.id }}" role="button" class="outline secondary">Zur Veranstaltungsseite</a>
+    <a href="/s/{{ token }}" role="button">{{ icon('user-circle') }} Meine Anmeldung ansehen</a>
+    <a href="/e/{{ event.id }}" role="button" class="outline secondary">{{ icon('arrow-left') }} Zur Veranstaltungsseite</a>
   </div>
 </article>
 

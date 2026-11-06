@@ -1,4 +1,14 @@
+import os
 import re
+
+# Muss vor jedem Import aus `app` stehen: app.config liest die Einstellungen
+# beim Import, und Umgebungsvariablen haben Vorrang vor der lokalen .env.
+# - BASE_URL: Eine https-Adresse in der .env macht das Session-Cookie
+#   `https_only`; der TestClient spricht http und verlöre jeden Login.
+# - SECRET_KEY: Tests nie mit dem Produktivschlüssel aus der .env fahren.
+os.environ["BASE_URL"] = "http://localhost:8000"
+os.environ.setdefault("SECRET_KEY", "synthetic-session-fixture-key-0123456789")
+os.environ["SECRET_KEY_FILE"] = ""
 
 import pytest
 from datetime import datetime, timedelta, date
@@ -11,7 +21,6 @@ from app.main import app
 from app.models import AdminUser, Event, Klasse, Shift, Station
 from app.security import hash_password, generate_token, hash_token
 
-import os
 TEST_DB_URL = os.environ.get("TEST_DATABASE_URL", "sqlite:///./data/test.db")
 os.makedirs(os.path.dirname(TEST_DB_URL.removeprefix("sqlite:///")) or ".", exist_ok=True)
 
